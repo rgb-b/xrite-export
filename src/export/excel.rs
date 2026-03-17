@@ -1,4 +1,4 @@
-//! Excel export — fills the bundled .xlsx templates using umya-spreadsheet.
+//! Excel export — fills user-provided .xlsx templates using umya-spreadsheet.
 //!
 //! Template layout (matches Python export/excel.py exactly):
 //!
@@ -14,16 +14,12 @@
 //!     A38 / I38 (std)   weight label / dot shape     (A42 / I42 for 16-step)
 //!     F column (dual)   =SUM(Bn:En)/4 average formula — fixed for second table
 
-use std::io::Write as IoWrite;
 use std::path::Path;
 
 use anyhow::{Context, Result};
 
 use crate::core::models::JobConfig;
-
-/// Embedded template bytes — standard (14 steps) and extended (16 steps).
-static TEMPLATE_STANDARD: &[u8] = include_bytes!("../../assets/template_standard.xlsx");
-static TEMPLATE_EXTENDED: &[u8] = include_bytes!("../../assets/template_extended.xlsx");
+use crate::settings;
 
 /// Row where step data starts (1-indexed, first table).
 const STEP_START_ROW_T1: u32 = 4;
@@ -73,20 +69,26 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
     let num_steps = job.num_steps() as u32;
     let (label_t1, step_start_t2, label_t2) = row_constants(num_steps);
 
-    let template_bytes = if num_steps > 14 {
-        TEMPLATE_EXTENDED
+    let tmpl_key = if num_steps > 14 {
+        "excel_template_extended"
     } else {
-        TEMPLATE_STANDARD
+        "excel_template"
     };
+    let tmpl_path_str = settings::get_str(tmpl_key);
+    if tmpl_path_str.is_empty() {
+        anyhow::bail!(
+            "Excel template path not set. Please configure it under Settings → Templates."
+        );
+    }
+    let tmpl_path = std::path::Path::new(&tmpl_path_str);
+    if !tmpl_path.exists() {
+        anyhow::bail!(
+            "Excel template not found: {}",
+            tmpl_path.display()
+        );
+    }
 
-    // Write template bytes to a named temp file so umya-spreadsheet can open it.
-    let mut tmp = tempfile::NamedTempFile::new().context("Failed to create temp file")?;
-    tmp.write_all(template_bytes)
-        .context("Failed to write template to temp file")?;
-    tmp.flush().context("Failed to flush temp file")?;
-    let tmp_path = tmp.path().to_path_buf();
-
-    let mut book = umya_spreadsheet::reader::xlsx::read(&tmp_path)
+    let mut book = umya_spreadsheet::reader::xlsx::read(tmpl_path)
         .map_err(|e| anyhow::anyhow!("Failed to read Excel template: {:?}", e))?;
 
     let title = job.heading();

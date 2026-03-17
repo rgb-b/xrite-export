@@ -257,6 +257,18 @@ pub fn show_weight_grid(
                             state.focus_request = None;
                         }
 
+                        // Select all text when the cell gains focus (manual click or auto-advance)
+                        if response.gained_focus() {
+                            if let Some(mut text_state) = egui::TextEdit::load_state(ui.ctx(), id) {
+                                let char_count = state.cells[row][col].chars().count();
+                                text_state.cursor.set_char_range(Some(egui::text::CCursorRange::two(
+                                    egui::text::CCursor::new(0),
+                                    egui::text::CCursor::new(char_count),
+                                )));
+                                egui::TextEdit::store_state(ui.ctx(), id, text_state);
+                            }
+                        }
+
                         // Validate: revert if invalid
                         if !is_valid_numeric(&state.cells[row][col]) {
                             state.cells[row][col] = old_val.clone();

@@ -38,6 +38,8 @@ pub struct InkDensityApp {
     show_templates_dialog: bool,
     tmpl_standard: String,
     tmpl_extended: String,
+    tmpl_excel_standard: String,
+    tmpl_excel_extended: String,
 }
 
 impl InkDensityApp {
@@ -57,6 +59,8 @@ impl InkDensityApp {
             show_templates_dialog: false,
             tmpl_standard: settings::get_str("ai_template"),
             tmpl_extended: settings::get_str("ai_template_extended"),
+            tmpl_excel_standard: settings::get_str("excel_template"),
+            tmpl_excel_extended: settings::get_str("excel_template_extended"),
         };
         app.load_initial_session();
         app
@@ -544,11 +548,17 @@ impl eframe::App for InkDensityApp {
                 .open(&mut open)
                 .show(ctx, |ui| {
                     egui::Grid::new("tmpl_grid").num_columns(3).spacing([8.0, 4.0]).show(ui, |ui| {
-                        let entries: &mut [(&str, &str, &mut String)] = &mut [
+                        // Illustrator templates
+                        ui.label(egui::RichText::new("Illustrator").strong());
+                        ui.label("");
+                        ui.label("");
+                        ui.end_row();
+
+                        let ai_entries: &mut [(&str, &str, &mut String)] = &mut [
                             ("Standard (14 steps)", "ai_template",          &mut self.tmpl_standard),
                             ("Extended (16 steps)", "ai_template_extended", &mut self.tmpl_extended),
                         ];
-                        for (label, key, path) in entries.iter_mut() {
+                        for (label, key, path) in ai_entries.iter_mut() {
                             ui.label(*label);
                             ui.add_sized([300.0, 20.0], egui::TextEdit::singleline(*path));
                             if ui.button("Browse...").clicked() {
@@ -563,11 +573,44 @@ impl eframe::App for InkDensityApp {
                             }
                             ui.end_row();
                         }
+
+                        ui.separator();
+                        ui.separator();
+                        ui.separator();
+                        ui.end_row();
+
+                        // Excel templates
+                        ui.label(egui::RichText::new("Excel").strong());
+                        ui.label("");
+                        ui.label("");
+                        ui.end_row();
+
+                        let xl_entries: &mut [(&str, &str, &mut String)] = &mut [
+                            ("Excel (14 steps)", "excel_template",          &mut self.tmpl_excel_standard),
+                            ("Excel (16 steps)", "excel_template_extended", &mut self.tmpl_excel_extended),
+                        ];
+                        for (label, key, path) in xl_entries.iter_mut() {
+                            ui.label(*label);
+                            ui.add_sized([300.0, 20.0], egui::TextEdit::singleline(*path));
+                            if ui.button("Browse...").clicked() {
+                                if let Some(p) = rfd::FileDialog::new()
+                                    .add_filter("Excel Template", &["xlsx"])
+                                    .add_filter("All Files", &["*"])
+                                    .pick_file()
+                                {
+                                    **path = p.to_string_lossy().to_string();
+                                    settings::set_str(key, path);
+                                }
+                            }
+                            ui.end_row();
+                        }
                     });
                     ui.add_space(4.0);
                     if ui.button("Save & Close").clicked() {
-                        settings::set_str("ai_template",          &self.tmpl_standard);
-                        settings::set_str("ai_template_extended", &self.tmpl_extended);
+                        settings::set_str("ai_template",              &self.tmpl_standard);
+                        settings::set_str("ai_template_extended",     &self.tmpl_extended);
+                        settings::set_str("excel_template",           &self.tmpl_excel_standard);
+                        settings::set_str("excel_template_extended",  &self.tmpl_excel_extended);
                         self.show_templates_dialog = false;
                     }
                 });
