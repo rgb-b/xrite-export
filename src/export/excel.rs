@@ -69,12 +69,7 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
     let num_steps = job.num_steps() as u32;
     let (label_t1, step_start_t2, label_t2) = row_constants(num_steps);
 
-    let tmpl_key = if num_steps > 14 {
-        "excel_template_extended"
-    } else {
-        "excel_template"
-    };
-    let tmpl_path_str = settings::get_str(tmpl_key);
+    let tmpl_path_str = settings::get_str("excel_template");
     if tmpl_path_str.is_empty() {
         anyhow::bail!(
             "Excel template path not set. Please configure it under Settings → Templates."
@@ -82,14 +77,15 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
     }
     let tmpl_path = std::path::Path::new(&tmpl_path_str);
     if !tmpl_path.exists() {
-        anyhow::bail!(
-            "Excel template not found: {}",
-            tmpl_path.display()
-        );
+        anyhow::bail!("Excel template not found: {}", tmpl_path.display());
     }
 
     let mut book = umya_spreadsheet::reader::xlsx::read(tmpl_path)
         .map_err(|e| anyhow::anyhow!("Failed to read Excel template: {:?}", e))?;
+
+    // The template has 4 sheets: 0=single-std, 1=dual-std, 2=single-ext (QUA), 3=dual-ext (QUA).
+    // For extended step counts use the QUA pair (offset 2), otherwise the standard pair (offset 0).
+    let sheet_offset: usize = if num_steps > 14 { 2 } else { 0 };
 
     let title = job.heading();
     let dot_shape = job.dot_shape();
@@ -97,8 +93,8 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
     let sheet_count = book.get_sheet_collection().len();
 
     for (shape_idx, shape) in job.shapes.iter().enumerate() {
-        let single_idx = shape_idx * 2;
-        let dual_idx = shape_idx * 2 + 1;
+        let single_idx = sheet_offset + shape_idx * 2;
+        let dual_idx = sheet_offset + shape_idx * 2 + 1;
 
         // Ensure template has enough sheets; clone first pair if needed.
         while book.get_sheet_collection().len() <= dual_idx {
