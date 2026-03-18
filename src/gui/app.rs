@@ -11,6 +11,12 @@ use crate::gui::job_config::{self, JobConfigState};
 use crate::gui::shape_tabs::{self, ShapeNotebookState};
 use crate::settings;
 
+/// Return the settings value for `key`, or `default` if empty/missing.
+fn xcm_or(key: &str, default: &str) -> String {
+    let v = settings::get_str(key);
+    if v.is_empty() { default.to_string() } else { v }
+}
+
 /// Export status shared between main thread and background export threads.
 #[derive(Clone, Default)]
 struct ExportStatus {
@@ -39,6 +45,19 @@ pub struct InkDensityApp {
     tmpl_standard: String,
     tmpl_extended: String,
     tmpl_excel: String,
+
+    // Cell Mapping dialog
+    show_cell_mapping_dialog: bool,
+    xcm_title_col:      String,
+    xcm_date_col:       String,
+    xcm_step_start_row: String,
+    xcm_data_col_c:     String,
+    xcm_data_col_m:     String,
+    xcm_data_col_y:     String,
+    xcm_data_col_k:     String,
+    xcm_label_col:      String,
+    xcm_dot_shape_col:  String,
+    xcm_gap_t1_to_t2:   String,
 }
 
 impl InkDensityApp {
@@ -59,6 +78,17 @@ impl InkDensityApp {
             tmpl_standard: settings::get_str("ai_template"),
             tmpl_extended: settings::get_str("ai_template_extended"),
             tmpl_excel: settings::get_str("excel_template"),
+            show_cell_mapping_dialog: false,
+            xcm_title_col:      xcm_or("xcm_title_col",      "A"),
+            xcm_date_col:       xcm_or("xcm_date_col",       "I"),
+            xcm_step_start_row: xcm_or("xcm_step_start_row", "4"),
+            xcm_data_col_c:     xcm_or("xcm_data_col_c",     "B"),
+            xcm_data_col_m:     xcm_or("xcm_data_col_m",     "C"),
+            xcm_data_col_y:     xcm_or("xcm_data_col_y",     "D"),
+            xcm_data_col_k:     xcm_or("xcm_data_col_k",     "E"),
+            xcm_label_col:      xcm_or("xcm_label_col",      "A"),
+            xcm_dot_shape_col:  xcm_or("xcm_dot_shape_col",  "I"),
+            xcm_gap_t1_to_t2:   xcm_or("xcm_gap_t1_to_t2",  "4"),
         };
         app.load_initial_session();
         app
@@ -411,6 +441,10 @@ impl eframe::App for InkDensityApp {
                         self.show_templates_dialog = true;
                         ui.close_menu();
                     }
+                    if ui.button("Cell Mapping...").clicked() {
+                        self.show_cell_mapping_dialog = true;
+                        ui.close_menu();
+                    }
                 });
             });
         });
@@ -535,6 +569,76 @@ impl eframe::App for InkDensityApp {
                         }
                     });
                 });
+        }
+
+        // Cell Mapping dialog
+        if self.show_cell_mapping_dialog {
+            let mut open = true;
+            egui::Window::new("Excel Cell Mapping")
+                .collapsible(false)
+                .resizable(false)
+                .open(&mut open)
+                .show(ctx, |ui| {
+                    ui.label("Configure which columns and rows data is written to in the Excel template.");
+                    ui.add_space(6.0);
+                    egui::Grid::new("xcm_grid")
+                        .num_columns(3)
+                        .spacing([8.0, 4.0])
+                        .show(ui, |ui| {
+                            ui.label(egui::RichText::new("Field").strong());
+                            ui.label(egui::RichText::new("Value").strong());
+                            ui.label(egui::RichText::new("Description").strong());
+                            ui.end_row();
+
+                            let rows: &mut [(&str, &str, &mut String)] = &mut [
+                                ("Title column",       "xcm_title_col",      &mut self.xcm_title_col),
+                                ("Date column",        "xcm_date_col",       &mut self.xcm_date_col),
+                                ("CMYK col — C",       "xcm_data_col_c",     &mut self.xcm_data_col_c),
+                                ("CMYK col — M",       "xcm_data_col_m",     &mut self.xcm_data_col_m),
+                                ("CMYK col — Y",       "xcm_data_col_y",     &mut self.xcm_data_col_y),
+                                ("CMYK col — K",       "xcm_data_col_k",     &mut self.xcm_data_col_k),
+                                ("Label column",       "xcm_label_col",      &mut self.xcm_label_col),
+                                ("Dot shape column",   "xcm_dot_shape_col",  &mut self.xcm_dot_shape_col),
+                                ("Step data start row","xcm_step_start_row", &mut self.xcm_step_start_row),
+                                ("Section gap (rows)", "xcm_gap_t1_to_t2",   &mut self.xcm_gap_t1_to_t2),
+                            ];
+                            let descriptions = [
+                                "Column for job title / customer",
+                                "Column for print date",
+                                "Column for Cyan readings",
+                                "Column for Magenta readings",
+                                "Column for Yellow readings",
+                                "Column for Black readings",
+                                "Column for weight label (footer row)",
+                                "Column for dot shape (footer row)",
+                                "First row of tint scale data",
+                                "Rows between end of table 1 and start of table 2 step data",
+                            ];
+                            for (i, (label, _key, val)) in rows.iter_mut().enumerate() {
+                                ui.label(*label);
+                                ui.add_sized([60.0, 20.0], egui::TextEdit::singleline(*val));
+                                ui.label(descriptions[i]);
+                                ui.end_row();
+                            }
+                        });
+                    ui.add_space(4.0);
+                    if ui.button("Save & Close").clicked() {
+                        settings::set_str("xcm_title_col",      &self.xcm_title_col);
+                        settings::set_str("xcm_date_col",       &self.xcm_date_col);
+                        settings::set_str("xcm_data_col_c",     &self.xcm_data_col_c);
+                        settings::set_str("xcm_data_col_m",     &self.xcm_data_col_m);
+                        settings::set_str("xcm_data_col_y",     &self.xcm_data_col_y);
+                        settings::set_str("xcm_data_col_k",     &self.xcm_data_col_k);
+                        settings::set_str("xcm_label_col",      &self.xcm_label_col);
+                        settings::set_str("xcm_dot_shape_col",  &self.xcm_dot_shape_col);
+                        settings::set_str("xcm_step_start_row", &self.xcm_step_start_row);
+                        settings::set_str("xcm_gap_t1_to_t2",   &self.xcm_gap_t1_to_t2);
+                        self.show_cell_mapping_dialog = false;
+                    }
+                });
+            if !open {
+                self.show_cell_mapping_dialog = false;
+            }
         }
 
         // Templates dialog
