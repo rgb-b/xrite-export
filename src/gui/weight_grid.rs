@@ -326,6 +326,18 @@ pub fn show_weight_grid(
                             }
                         }
 
+                        // Amber background warning for density values outside 0.3–4.0
+                        if row == 0 {
+                            let val = parse_f64(&state.cells[row][col]);
+                            if val != 0.0 && (val < 0.3 || val > 4.0) {
+                                ui.painter().rect_filled(
+                                    response.rect,
+                                    2.0,
+                                    egui::Color32::from_rgba_unmultiplied(255, 165, 0, 80),
+                                );
+                            }
+                        }
+
                         // Highlight focused cell
                         if response.has_focus() {
                             let rect = response.rect;

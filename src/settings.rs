@@ -12,6 +12,7 @@ const APP_NAME: &str = "InkDensityTool";
 fn default_settings() -> HashMap<String, Value> {
     let mut m = HashMap::new();
     m.insert("illustrator_path".into(), Value::String(String::new()));
+    m.insert("libreoffice_path".into(), Value::String(String::new()));
     m.insert("ai_template".into(), Value::String(String::new()));
     m.insert("ai_template_extended".into(), Value::String(String::new()));
     m.insert(
@@ -23,18 +24,30 @@ fn default_settings() -> HashMap<String, Value> {
         serde_json::json!(["100", "95", "90", "80", "70", "60", "50", "40", "30", "20", "10", "5", "3", "1"]),
     );
     m.insert("last_session_path".into(), Value::String(String::new()));
+    // Configurable dropdown options
+    m.insert("dropdown_print_types".into(),     serde_json::json!(["CRS", "QUA"]));
+    m.insert("dropdown_finishes".into(),        serde_json::json!(["RP", "SP", "CBW SP"]));
+    m.insert("dropdown_dot_shape_types".into(), serde_json::json!(["CRS", "CRY", "HD", "ESXR"]));
     // Excel cell map defaults
-    m.insert("xcm_title_col".into(),      Value::String("A".into()));
-    m.insert("xcm_date_col".into(),       Value::String("I".into()));
-    m.insert("xcm_step_start_row".into(), Value::String("4".into()));
-    m.insert("xcm_data_col_c".into(),     Value::String("B".into()));
-    m.insert("xcm_data_col_m".into(),     Value::String("C".into()));
-    m.insert("xcm_data_col_y".into(),     Value::String("D".into()));
-    m.insert("xcm_data_col_k".into(),     Value::String("E".into()));
-    m.insert("xcm_label_col".into(),      Value::String("A".into()));
-    m.insert("xcm_dot_shape_col".into(),  Value::String("I".into()));
-    m.insert("xcm_gap_t1_to_t2".into(),   Value::String("4".into()));
+    m.insert("xcm_title_col".into(),           Value::String("A".into()));
+    m.insert("xcm_date_col".into(),            Value::String("I".into()));
+    m.insert("xcm_step_start_row".into(),      Value::String("4".into()));
+    m.insert("xcm_data_col_c".into(),          Value::String("B".into()));
+    m.insert("xcm_data_col_m".into(),          Value::String("C".into()));
+    m.insert("xcm_data_col_y".into(),          Value::String("D".into()));
+    m.insert("xcm_data_col_k".into(),          Value::String("E".into()));
+    m.insert("xcm_label_col".into(),           Value::String("A".into()));
+    m.insert("xcm_dot_shape_col".into(),       Value::String("I".into()));
+    m.insert("xcm_gap_t1_to_t2".into(),        Value::String("4".into()));
+    m.insert("xcm_density_row_offset".into(),  Value::String("1".into()));
+    m.insert("xcm_title_t2_row_offset".into(), Value::String("3".into()));
     m
+}
+
+/// Save a `Vec<String>` to settings as a JSON array.
+pub fn set_string_vec(key: &str, values: &[String]) {
+    let arr: Vec<Value> = values.iter().map(|s| Value::String(s.clone())).collect();
+    set(key, Value::Array(arr));
 }
 
 fn settings_path() -> PathBuf {

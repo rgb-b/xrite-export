@@ -28,16 +28,18 @@ use crate::settings;
 /// Configurable mapping of data fields to Excel columns/rows.
 /// All columns are 1-indexed (A=1, B=2, …).
 pub struct ExcelCellMap {
-    pub title_col:      u32, // default 1  (A)
-    pub date_col:       u32, // default 9  (I)
-    pub step_start_row: u32, // default 4
-    pub data_col_c:     u32, // default 2  (B)
-    pub data_col_m:     u32, // default 3  (C)
-    pub data_col_y:     u32, // default 4  (D)
-    pub data_col_k:     u32, // default 5  (E)
-    pub label_col:      u32, // default 1  (A)
-    pub dot_shape_col:  u32, // default 9  (I)
-    pub gap_t1_to_t2:   u32, // default 4
+    pub title_col:          u32, // default 1  (A)
+    pub date_col:           u32, // default 9  (I)
+    pub step_start_row:     u32, // default 4
+    pub data_col_c:         u32, // default 2  (B)
+    pub data_col_m:         u32, // default 3  (C)
+    pub data_col_y:         u32, // default 4  (D)
+    pub data_col_k:         u32, // default 5  (E)
+    pub label_col:          u32, // default 1  (A)
+    pub dot_shape_col:      u32, // default 9  (I)
+    pub gap_t1_to_t2:       u32, // default 4
+    pub density_row_offset: u32, // default 1  (density row = step_start_row - density_row_offset)
+    pub title_t2_row_offset: u32, // default 3 (title2 row = step_start_t2 - title_t2_row_offset)
 }
 
 impl ExcelCellMap {
@@ -52,16 +54,18 @@ impl ExcelCellMap {
         };
 
         Self {
-            title_col:      col("xcm_title_col",      1),
-            date_col:       col("xcm_date_col",        9),
-            step_start_row: row("xcm_step_start_row",  4),
-            data_col_c:     col("xcm_data_col_c",      2),
-            data_col_m:     col("xcm_data_col_m",      3),
-            data_col_y:     col("xcm_data_col_y",      4),
-            data_col_k:     col("xcm_data_col_k",      5),
-            label_col:      col("xcm_label_col",       1),
-            dot_shape_col:  col("xcm_dot_shape_col",   9),
-            gap_t1_to_t2:   row("xcm_gap_t1_to_t2",   4),
+            title_col:           col("xcm_title_col",           1),
+            date_col:            col("xcm_date_col",             9),
+            step_start_row:      row("xcm_step_start_row",       4),
+            data_col_c:          col("xcm_data_col_c",           2),
+            data_col_m:          col("xcm_data_col_m",           3),
+            data_col_y:          col("xcm_data_col_y",           4),
+            data_col_k:          col("xcm_data_col_k",           5),
+            label_col:           col("xcm_label_col",            1),
+            dot_shape_col:       col("xcm_dot_shape_col",        9),
+            gap_t1_to_t2:        row("xcm_gap_t1_to_t2",        4),
+            density_row_offset:  row("xcm_density_row_offset",  1),
+            title_t2_row_offset: row("xcm_title_t2_row_offset", 3),
         }
     }
 
@@ -176,7 +180,7 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
             ws.get_cell_mut(addr(cm.date_col, 1)).set_value(&job.date);
 
             if let Some(w0) = shape.weights.get(0) {
-                write_density(ws, &w0.density, cm.step_start_row - 1, &data_cols);
+                write_density(ws, &w0.density, cm.step_start_row - cm.density_row_offset, &data_cols);
                 write_steps(ws, &w0.steps, cm.step_start_row, num_steps, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t1)).set_value(&w0.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t1)).set_value(&dot_shape);
@@ -193,19 +197,19 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
             ws.get_cell_mut(addr(cm.date_col, 1)).set_value(&job.date);
 
             if let Some(w1) = shape.weights.get(1) {
-                write_density(ws, &w1.density, cm.step_start_row - 1, &data_cols);
+                write_density(ws, &w1.density, cm.step_start_row - cm.density_row_offset, &data_cols);
                 write_steps(ws, &w1.steps, cm.step_start_row, num_steps, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t1)).set_value(&w1.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t1)).set_value(&dot_shape);
             }
 
             if let Some(w2) = shape.weights.get(2) {
-                // Title and date for the second section (3 rows before step data starts)
-                let title_t2_row = step_start_t2 - 3;
+                // Title and date for the second section.
+                let title_t2_row = step_start_t2 - cm.title_t2_row_offset;
                 ws.get_cell_mut(addr(cm.title_col, title_t2_row)).set_value(&title);
                 ws.get_cell_mut(addr(cm.date_col, title_t2_row)).set_value(&job.date);
 
-                write_density(ws, &w2.density, step_start_t2 - 1, &data_cols);
+                write_density(ws, &w2.density, step_start_t2 - cm.density_row_offset, &data_cols);
                 write_steps(ws, &w2.steps, step_start_t2, num_steps, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t2)).set_value(&w2.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t2)).set_value(&dot_shape);

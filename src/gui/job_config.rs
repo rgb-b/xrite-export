@@ -1,24 +1,32 @@
 //! JobConfigPanel — left panel with job metadata and weight label management.
 
 use crate::core::models::{JobConfig, STEP_LABELS_14, STEP_LABELS_16};
+use crate::settings;
 
-const PRINT_TYPES: &[&str] = &["CRS", "QUA"];
-const FINISHES: &[&str] = &["RP", "SP", "CBW SP"];
-const DOT_SHAPE_TYPES: &[&str] = &["CRS", "CRY", "HD", "ESXR"];
+/// Load a dropdown option list from settings, falling back to hard-coded defaults.
+fn load_dropdown(key: &str, defaults: &[&str]) -> Vec<String> {
+    let v = settings::get_string_vec(key);
+    if v.is_empty() {
+        defaults.iter().map(|s| s.to_string()).collect()
+    } else {
+        v
+    }
+}
 
 /// State for the job configuration panel.
 pub struct JobConfigState {
     pub customer: String,
-    pub print_type_idx: usize,
+    pub print_type: String,
     pub stock_desc: String,
-    pub finish_idx: usize,
-    pub dot_shape_type_idx: usize,
+    pub finish: String,
+    pub dot_shape_type: String,
     pub dot_shape_number: String,
     pub date: String,
     pub set_number: String,
     pub job_number: String,
     pub weight_labels: Vec<String>,
     pub step_preset: StepPreset,
+    pub custom_step_labels: Vec<String>,
 
     /// Signals that weight labels changed this frame
     pub weights_changed: bool,
@@ -30,22 +38,24 @@ pub struct JobConfigState {
 pub enum StepPreset {
     Standard14,
     Extended16,
+    Custom,
 }
 
 impl JobConfigState {
     pub fn new() -> Self {
         Self {
             customer: String::new(),
-            print_type_idx: 0,
+            print_type: "CRS".into(),
             stock_desc: String::new(),
-            finish_idx: 0,
-            dot_shape_type_idx: 0,
+            finish: "RP".into(),
+            dot_shape_type: "CRS".into(),
             dot_shape_number: String::new(),
             date: String::new(),
             set_number: String::new(),
             job_number: String::new(),
             weight_labels: vec!["120#".into(), "150#".into(), "200#".into()],
             step_preset: StepPreset::Standard14,
+            custom_step_labels: STEP_LABELS_14.iter().map(|s| s.to_string()).collect(),
             weights_changed: false,
             steps_changed: false,
         }
@@ -53,41 +63,41 @@ impl JobConfigState {
 
     pub fn populate(&mut self, job: &JobConfig) {
         self.customer = job.customer.clone();
-        self.print_type_idx = PRINT_TYPES
-            .iter()
-            .position(|&s| s == job.print_type)
-            .unwrap_or(0);
+        self.print_type = job.print_type.clone();
         self.stock_desc = job.stock_desc.clone();
-        self.finish_idx = FINISHES
-            .iter()
-            .position(|&s| s == job.finish)
-            .unwrap_or(0);
-        self.dot_shape_type_idx = DOT_SHAPE_TYPES
-            .iter()
-            .position(|&s| s == job.dot_shape_type)
-            .unwrap_or(0);
+        self.finish = job.finish.clone();
+        self.dot_shape_type = job.dot_shape_type.clone();
         self.dot_shape_number = job.dot_shape_number.clone();
         self.date = job.date.clone();
         self.set_number = job.set_number.clone();
         self.job_number = job.job_number.clone();
         self.weight_labels = job.weight_labels.clone();
-        self.step_preset = if job.step_labels.len() == 16 {
+        self.custom_step_labels = job.step_labels.clone();
+
+        let is_14 = job.step_labels.len() == STEP_LABELS_14.len()
+            && job.step_labels.iter().zip(STEP_LABELS_14.iter()).all(|(a, b)| a.as_str() == *b);
+        let is_16 = job.step_labels.len() == STEP_LABELS_16.len()
+            && job.step_labels.iter().zip(STEP_LABELS_16.iter()).all(|(a, b)| a.as_str() == *b);
+
+        self.step_preset = if is_14 {
+            StepPreset::Standard14
+        } else if is_16 {
             StepPreset::Extended16
         } else {
-            StepPreset::Standard14
+            StepPreset::Custom
         };
     }
 
     pub fn print_type(&self) -> &str {
-        PRINT_TYPES.get(self.print_type_idx).unwrap_or(&"CRS")
+        &self.print_type
     }
 
     pub fn finish(&self) -> &str {
-        FINISHES.get(self.finish_idx).unwrap_or(&"RP")
+        &self.finish
     }
 
     pub fn dot_shape_type(&self) -> &str {
-        DOT_SHAPE_TYPES.get(self.dot_shape_type_idx).unwrap_or(&"CRS")
+        &self.dot_shape_type
     }
 
     /// Clear all job metadata fields (not weight labels or step preset).
@@ -98,15 +108,16 @@ impl JobConfigState {
         self.date.clear();
         self.set_number.clear();
         self.job_number.clear();
-        self.print_type_idx = 0;
-        self.finish_idx = 0;
-        self.dot_shape_type_idx = 0;
+        self.print_type = "CRS".into();
+        self.finish = "RP".into();
+        self.dot_shape_type = "CRS".into();
     }
 
     pub fn step_labels(&self) -> Vec<String> {
         match self.step_preset {
             StepPreset::Standard14 => STEP_LABELS_14.iter().map(|s| s.to_string()).collect(),
             StepPreset::Extended16 => STEP_LABELS_16.iter().map(|s| s.to_string()).collect(),
+            StepPreset::Custom => self.custom_step_labels.clone(),
         }
     }
 }
@@ -128,15 +139,20 @@ pub fn show_job_config(ui: &mut egui::Ui, state: &mut JobConfigState) -> bool {
 
     ui.add_space(4.0);
 
+    // Dropdown options loaded from settings
+    let print_types = load_dropdown("dropdown_print_types", &["CRS", "QUA"]);
+    let finishes = load_dropdown("dropdown_finishes", &["RP", "SP", "CBW SP"]);
+    let dot_shape_types = load_dropdown("dropdown_dot_shape_types", &["CRS", "CRY", "HD", "ESXR"]);
+
     // Heading: print type + stock + finish
     ui.label("Heading:");
     ui.horizontal(|ui| {
         egui::ComboBox::from_id_salt("print_type")
             .width(50.0)
-            .selected_text(state.print_type())
+            .selected_text(&state.print_type)
             .show_ui(ui, |ui| {
-                for (i, &pt) in PRINT_TYPES.iter().enumerate() {
-                    if ui.selectable_value(&mut state.print_type_idx, i, pt).changed() {
+                for pt in &print_types {
+                    if ui.selectable_value(&mut state.print_type, pt.clone(), pt).changed() {
                         changed = true;
                     }
                 }
@@ -151,10 +167,10 @@ pub fn show_job_config(ui: &mut egui::Ui, state: &mut JobConfigState) -> bool {
 
         egui::ComboBox::from_id_salt("finish")
             .width(70.0)
-            .selected_text(state.finish())
+            .selected_text(&state.finish)
             .show_ui(ui, |ui| {
-                for (i, &f) in FINISHES.iter().enumerate() {
-                    if ui.selectable_value(&mut state.finish_idx, i, f).changed() {
+                for f in &finishes {
+                    if ui.selectable_value(&mut state.finish, f.clone(), f).changed() {
                         changed = true;
                     }
                 }
@@ -168,10 +184,10 @@ pub fn show_job_config(ui: &mut egui::Ui, state: &mut JobConfigState) -> bool {
     ui.horizontal(|ui| {
         egui::ComboBox::from_id_salt("dot_shape_type")
             .width(60.0)
-            .selected_text(state.dot_shape_type())
+            .selected_text(&state.dot_shape_type)
             .show_ui(ui, |ui| {
-                for (i, &ds) in DOT_SHAPE_TYPES.iter().enumerate() {
-                    if ui.selectable_value(&mut state.dot_shape_type_idx, i, ds).changed() {
+                for ds in &dot_shape_types {
+                    if ui.selectable_value(&mut state.dot_shape_type, ds.clone(), ds).changed() {
                         changed = true;
                     }
                 }
@@ -265,9 +281,51 @@ pub fn show_job_config(ui: &mut egui::Ui, state: &mut JobConfigState) -> bool {
         StepPreset::Extended16,
         "Extended (100 -> 0.4)",
     );
+    ui.radio_value(&mut state.step_preset, StepPreset::Custom, "Custom");
+
     if state.step_preset != old_preset {
+        // Switching to Custom: seed from the preset we just left.
+        if state.step_preset == StepPreset::Custom {
+            state.custom_step_labels = match old_preset {
+                StepPreset::Standard14 => STEP_LABELS_14.iter().map(|s| s.to_string()).collect(),
+                StepPreset::Extended16 => STEP_LABELS_16.iter().map(|s| s.to_string()).collect(),
+                StepPreset::Custom => state.custom_step_labels.clone(),
+            };
+        }
         changed = true;
         state.steps_changed = true;
+    }
+
+    // Custom step label editor
+    if state.step_preset == StepPreset::Custom {
+        ui.add_space(4.0);
+        ui.label("Step labels (top → bottom):");
+        let mut remove_step: Option<usize> = None;
+        let num_steps = state.custom_step_labels.len();
+        for i in 0..num_steps {
+            ui.horizontal(|ui| {
+                if ui
+                    .add_sized([50.0, 20.0], egui::TextEdit::singleline(&mut state.custom_step_labels[i]))
+                    .changed()
+                {
+                    changed = true;
+                    state.steps_changed = true;
+                }
+                if num_steps > 1 && ui.small_button("x").clicked() {
+                    remove_step = Some(i);
+                }
+            });
+        }
+        if let Some(idx) = remove_step {
+            state.custom_step_labels.remove(idx);
+            changed = true;
+            state.steps_changed = true;
+        }
+        if ui.button("+ Add Step").clicked() {
+            state.custom_step_labels.push(String::new());
+            changed = true;
+            state.steps_changed = true;
+        }
     }
 
     changed

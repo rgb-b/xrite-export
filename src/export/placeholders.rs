@@ -67,8 +67,8 @@ pub fn build_placeholders(
             ph.insert(format!("<<W{wn}_D{suffix}>>"), fmt_value(val));
         }
 
-        // Step rows (R01 … R16)
-        for ri in 0..16 {
+        // Step rows — generate one placeholder per actual step in the job.
+        for ri in 0..job.step_labels.len() {
             let rn = ri + 1;
             for (ci, suffix) in COLOUR_SUFFIXES.iter().enumerate() {
                 let val = weight.and_then(|w| w.steps.get(ri)).map(|row| row[ci]).unwrap_or(0.0);
