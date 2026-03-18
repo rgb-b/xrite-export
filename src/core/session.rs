@@ -29,8 +29,25 @@ pub fn save_session(job: &JobConfig, path: &Path) -> Result<()> {
     }
     let json = serde_json::to_string_pretty(job)
         .context("Failed to serialize job")?;
-    fs::write(path, json)
-        .with_context(|| format!("Failed to write session: {}", path.display()))?;
+
+    // Write atomically: temp file → backup → rename.
+    let file_name = path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned();
+    let tmp_path = path.with_file_name(format!("{file_name}.tmp"));
+    fs::write(&tmp_path, &json)
+        .with_context(|| format!("Failed to write temp file: {}", tmp_path.display()))?;
+
+    // Best-effort backup of previous version.
+    if path.is_file() {
+        let bak_path = path.with_file_name(format!("{file_name}.bak"));
+        let _ = fs::copy(path, &bak_path);
+    }
+
+    fs::rename(&tmp_path, path)
+        .with_context(|| format!("Failed to rename temp to session: {}", path.display()))?;
     Ok(())
 }
 

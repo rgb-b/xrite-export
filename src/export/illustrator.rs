@@ -22,8 +22,20 @@ use crate::settings;
 /// Runner.jsx template — embedded at compile time.
 const RUNNER_JSX: &str = include_str!("../../assets/runner.jsx");
 
-/// Common Illustrator install paths to probe (Windows).
+/// Builder script — embedded at compile time so it can be extracted on any machine.
+const BUILDER_JSX: &str = include_str!("../../assets/build_ai_template.jsx");
+
+pub fn builder_jsx() -> &'static str {
+    BUILDER_JSX
+}
+
+/// Common Illustrator install paths to probe (Windows), newest-first.
 const ILLUSTRATOR_SEARCH_PATHS: &[&str] = &[
+    r"C:\Program Files\Adobe\Adobe Illustrator 2030\Support Files\Contents\Windows\Illustrator.exe",
+    r"C:\Program Files\Adobe\Adobe Illustrator 2029\Support Files\Contents\Windows\Illustrator.exe",
+    r"C:\Program Files\Adobe\Adobe Illustrator 2028\Support Files\Contents\Windows\Illustrator.exe",
+    r"C:\Program Files\Adobe\Adobe Illustrator 2027\Support Files\Contents\Windows\Illustrator.exe",
+    r"C:\Program Files\Adobe\Adobe Illustrator 2026\Support Files\Contents\Windows\Illustrator.exe",
     r"C:\Program Files\Adobe\Adobe Illustrator 2025\Support Files\Contents\Windows\Illustrator.exe",
     r"C:\Program Files\Adobe\Adobe Illustrator 2024\Support Files\Contents\Windows\Illustrator.exe",
     r"C:\Program Files\Adobe\Adobe Illustrator 2023\Support Files\Contents\Windows\Illustrator.exe",
