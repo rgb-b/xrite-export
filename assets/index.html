@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ink Density Tool</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --border: #d0d0d0;
+  --border-dark: #aaaaaa;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --tab-active: #2563eb;
+  --tab-active-text: #fff;
+  --btn-bg: #e8e8e8;
+  --btn-hover: #d8d8d8;
+  --danger: #dc2626;
+  --readonly-bg: #f0f0f0;
+  --chip-bg: #dbeafe;
+  --chip-text: #1e40af;
+  --header-h: 44px;
+  --left-w: 230px;
+  --font: system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, 'Cascadia Code', monospace;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+#toolbar {
+  height: var(--header-h);
+  background: #1e293b;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+}
+.app-title {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: .3px;
+  margin-right: 8px;
+}
+.toolbar-sep { flex: 1; }
+.tbtn {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #e2e8f0;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.tbtn:hover { background: rgba(255,255,255,.2); }
+.tbtn:disabled { opacity: .4; cursor: default; }
+.tbtn.primary { background: var(--accent); border-color: var(--accent); }
+.tbtn.primary:hover { background: var(--accent-hover); }
+
+/* ── Main layout ─────────────────────────────────────────────────────────── */
+#main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Left panel ──────────────────────────────────────────────────────────── */
+#left-panel {
+  width: var(--left-w);
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 10px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.field-row label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.field-row input,
+.field-row select {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-family: var(--font);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+.field-row input:focus,
+.field-row select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.field-row.inline { flex-direction: row; gap: 4px; }
+.field-row.inline input { flex: 1; min-width: 0; }
+
+.section-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+/* Weight chips */
+#weight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  padding: 2px 8px 2px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.chip .chip-del {
+  cursor: pointer;
+  opacity: .5;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 1px;
+}
+.chip .chip-del:hover { opacity: 1; color: var(--danger); }
+.chip-add-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+.chip-add-row input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+.chip-add-row button {
+  background: var(--btn-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.chip-add-row button:hover { background: var(--btn-hover); }
+
+/* Step preset */
+.preset-row {
+  display: flex;
+  gap: 6px;
+}
+.preset-row label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* ── Center ───────────────────────────────────────────────────────────────── */
+#center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 10px 0;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: var(--btn-bg);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  position: relative;
+  bottom: -2px;
+  transition: background .1s;
+}
+.tab:hover { background: var(--btn-hover); }
+.tab.active {
+  background: var(--tab-active);
+  color: var(--tab-active-text);
+  border-color: var(--tab-active);
+  font-weight: 600;
+}
+.tab .tab-del {
+  font-size: 13px;
+  opacity: .5;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.tab .tab-del:hover { opacity: 1; }
+.tab.active .tab-del { opacity: .7; }
+.tab.active .tab-del:hover { opacity: 1; }
+.tab-add {
+  padding: 5px 10px;
+  border: 1px dashed var(--border-dark);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  position: relative;
+  bottom: -2px;
+}
+.tab-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Weight tab bar (inner) */
+#weight-tab-bar {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 4px 10px 0;
+}
+#weight-tab-bar .tab {
+  background: #e8ecf0;
+  font-size: 11px;
+  padding: 4px 10px;
+}
+#weight-tab-bar .tab.active {
+  background: #475569;
+  border-color: #475569;
+}
+
+/* ── Grid area ───────────────────────────────────────────────────────────── */
+#grid-area {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  color: var(--text-muted);
+}
+.empty-state button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.empty-state button:hover { background: var(--accent-hover); }
+
+/* Data grid */
+.density-grid {
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  width: auto;
+}
+.density-grid th {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 6px 14px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  border: 1px solid #334155;
+}
+.density-grid th.row-header {
+  text-align: left;
+  padding-left: 10px;
+}
+.density-grid td {
+  border: 1px solid var(--border);
+  padding: 1px;
+}
+.density-grid td.row-label {
+  padding: 3px 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font);
+  white-space: nowrap;
+  background: #f8f9fa;
+  min-width: 70px;
+}
+.density-grid tr.density-row td.row-label {
+  font-weight: 600;
+  color: var(--text);
+}
+.density-grid tr.readonly-row td.row-label {
+  color: #999;
+}
+.density-grid tr:hover td { background: #f7f9ff; }
+.density-grid tr:hover td.row-label { background: #eef2f8; }
+.density-grid tr.readonly-row:hover td { background: var(--readonly-bg); }
+
+.cell-input {
+  width: 72px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 4px 6px;
+  color: var(--text);
+  text-align: right;
+  display: block;
+}
+.cell-input:focus {
+  background: #eff6ff;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+.cell-input[readonly] {
+  background: var(--readonly-bg);
+  color: #888;
+  cursor: default;
+}
+.cell-input.has-value { color: #111; font-weight: 500; }
+
+/* ── Settings modal ──────────────────────────────────────────────────────── */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#modal-overlay[hidden] { display: none; }
+#modal-box {
+  background: var(--surface);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#modal-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 14px;
+  gap: 8px;
+}
+#modal-header button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+}
+#modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: .4px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.settings-section-title:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.settings-row label { font-size: 12px; font-weight: 500; }
+.settings-row input {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--text);
+  background: var(--surface);
+}
+.settings-row input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.settings-row .hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+#modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+#modal-footer button {
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+}
+#modal-footer button:hover { background: var(--btn-hover); }
+#modal-footer button.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+#modal-footer button.primary:hover { background: var(--accent-hover); }
+
+/* Status toast */
+#toast {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  z-index: 200;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+#toast[hidden] { opacity: 0; }
+#toast.error { background: #7f1d1d; }
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<header id="toolbar">
+  <span class="app-title">Ink Density Tool</span>
+  <div class="toolbar-sep"></div>
+  <button class="tbtn" onclick="saveSession()">&#128190; Save Session</button>
+  <button class="tbtn" onclick="document.getElementById('session-file').click()">&#128194; Load Session</button>
+  <input id="session-file" type="file" accept=".json" hidden onchange="loadSessionFile(event)">
+  <button class="tbtn primary" onclick="exportExcel()">&#128202; Export Excel</button>
+  <button class="tbtn" id="pdf-btn" onclick="exportPDF()">&#128196; Export PDF</button>
+  <button class="tbtn" onclick="openSettings()">&#9881; Settings</button>
+</header>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- Left panel -->
+  <aside id="left-panel">
+    <div class="field-row">
+      <label>Customer</label>
+      <input id="f-customer" type="text" oninput="job.customer=this.value">
+    </div>
+    <div class="field-row">
+      <label>Print Type</label>
+      <select id="f-print-type" onchange="job.print_type=this.value"></select>
+    </div>
+    <div class="field-row">
+      <label>Stock Desc</label>
+      <input id="f-stock-desc" type="text" oninput="job.stock_desc=this.value">
+    </div>
+    <div class="field-row">
+      <label>Finish</label>
+      <select id="f-finish" onchange="job.finish=this.value"></select>
+    </div>
+    <div class="field-row inline">
+      <div class="field-row" style="flex:1">
+        <label>Dot Shape</label>
+        <select id="f-dot-shape-type" onchange="job.dot_shape_type=this.value"></select>
+      </div>
+      <div class="field-row" style="width:60px">
+        <label>No.</label>
+        <input id="f-dot-shape-num" type="text" oninput="job.dot_shape_number=this.value">
+      </div>
+    </div>
+    <div class="field-row">
+      <label>Date</label>
+      <input id="f-date" type="text" placeholder="dd/mm/yyyy" oninput="job.date=this.value">
+    </div>
+    <div class="field-row inline">
+      <div class="field-row" style="flex:1">
+        <label>Set #</label>
+        <input id="f-set-num" type="text" oninput="job.set_number=this.value">
+      </div>
+      <div class="field-row" style="flex:1">
+        <label>Job #</label>
+        <input id="f-job-num" type="text" oninput="job.job_number=this.value">
+      </div>
+    </div>
+
+    <div class="section-label">Weight Labels</div>
+    <div id="weight-chips"></div>
+    <div class="chip-add-row">
+      <input id="new-chip-input" type="text" placeholder="e.g. 175#" maxlength="10"
+             onkeydown="if(event.key==='Enter')addWeightLabel()">
+      <button onclick="addWeightLabel()">+</button>
+    </div>
+
+    <div class="section-label">Step Preset</div>
+    <div class="preset-row">
+      <label><input type="radio" name="preset" value="14" onchange="applyStepPreset(14)"> Std 14</label>
+      <label><input type="radio" name="preset" value="16" onchange="applyStepPreset(16)"> Ext 16</label>
+    </div>
+  </aside>
+
+  <!-- Center -->
+  <div id="center">
+    <div class="tab-bar" id="shape-tab-bar"></div>
+    <div class="tab-bar" id="weight-tab-bar" style="padding-top:4px;font-size:11px;"></div>
+    <div id="grid-area"></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div id="modal-overlay" hidden>
+  <div id="modal-box">
+    <div id="modal-header">
+      <span>Settings</span>
+      <button onclick="closeSettings()" title="Close">&#x2715;</button>
+    </div>
+    <div id="modal-body">
+      <div class="settings-section-title">Server — Excel Export</div>
+      <div class="settings-row">
+        <label>Excel Template Path (server filesystem)</label>
+        <input id="s-excel-template" type="text" placeholder="/home/user/templates/template_standard.xlsx">
+        <span class="hint">Path to the .xlsx template on the Linux server.</span>
+      </div>
+
+      <div class="settings-section-title">Companion — Illustrator / PDF</div>
+      <div class="settings-row">
+        <label>Illustrator.exe Path</label>
+        <input id="s-illustrator-path" type="text" placeholder="C:\Program Files\Adobe\...">
+        <span class="hint">Set on companion PC. Saved to companion's local settings.</span>
+      </div>
+      <div class="settings-row">
+        <label>AI Template (Standard 14-step)</label>
+        <input id="s-ai-template" type="text" placeholder="C:\templates\template.ai">
+      </div>
+      <div class="settings-row">
+        <label>AI Template (Extended 16-step)</label>
+        <input id="s-ai-template-ext" type="text" placeholder="C:\templates\template_extended.ai">
+      </div>
+
+      <div class="settings-section-title">Excel Cell Mapping</div>
+      <div id="xcm-fields"></div>
+    </div>
+    <div id="modal-footer">
+      <button onclick="closeSettings()">Cancel</button>
+      <button class="primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" hidden></div>
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────────
+let job = null;
+let settings = {};
+let activeShapeIdx = 0;
+let activeWeightIdx = [];   // per shape
+let companionAvailable = false;
+let settleTimer = null;
+
+const STEP_LABELS_14 = ["100","95","90","80","70","60","50","40","30","20","10","5","3","1"];
+const STEP_LABELS_16 = ["100","95","90","80","70","60","50","40","30","20","10","5","3","1","0.8","0.4"];
+
+const DROPDOWN_KEYS = {
+  'f-print-type':     'dropdown_print_types',
+  'f-finish':         'dropdown_finishes',
+  'f-dot-shape-type': 'dropdown_dot_shape_types',
+};
+
+const XCM_FIELDS = [
+  { key: 'xcm_title_col',           label: 'Title Column',             dflt: 'A' },
+  { key: 'xcm_date_col',            label: 'Date Column',              dflt: 'I' },
+  { key: 'xcm_step_start_row',      label: 'Step Start Row',           dflt: '4' },
+  { key: 'xcm_data_col_c',          label: 'Data Column C',            dflt: 'B' },
+  { key: 'xcm_data_col_m',          label: 'Data Column M',            dflt: 'C' },
+  { key: 'xcm_data_col_y',          label: 'Data Column Y',            dflt: 'D' },
+  { key: 'xcm_data_col_k',          label: 'Data Column K',            dflt: 'E' },
+  { key: 'xcm_label_col',           label: 'Label Column',             dflt: 'A' },
+  { key: 'xcm_dot_shape_col',       label: 'Dot Shape Column',         dflt: 'I' },
+  { key: 'xcm_gap_t1_to_t2',        label: 'Gap T1→T2 (rows)',         dflt: '4' },
+  { key: 'xcm_density_row_offset',  label: 'Density Row Offset',       dflt: '1' },
+  { key: 'xcm_title_t2_row_offset', label: 'Title T2 Row Offset',      dflt: '3' },
+];
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  buildXcmFields();
+  await Promise.all([fetchJob(), fetchSettings()]);
+  populateMetadata();
+  populateDropdowns();
+  renderWeightChips();
+  renderStepPreset();
+  renderShapeTabs();
+  probeCompanion();
+}
+
+async function fetchJob() {
+  try {
+    const r = await fetch('/api/job');
+    job = await r.json();
+    activeWeightIdx = job.shapes.map(() => 0);
+    if (activeShapeIdx >= job.shapes.length) activeShapeIdx = 0;
+  } catch (e) {
+    job = makeDefaultJob();
+    activeWeightIdx = [];
+    showToast('Could not load job from server', true);
+  }
+}
+
+async function fetchSettings() {
+  try {
+    const r = await fetch('/api/settings');
+    settings = await r.json();
+  } catch (e) {
+    settings = {};
+  }
+}
+
+async function pushJob() {
+  try {
+    await fetch('/api/job', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(job),
+    });
+  } catch (e) { /* non-fatal */ }
+}
+
+function makeDefaultJob() {
+  return {
+    customer: '', print_type: 'CRS', stock_desc: '', finish: 'RP',
+    dot_shape_type: 'CRS', dot_shape_number: '',
+    date: '', set_number: '', job_number: '',
+    weight_labels: ['120#', '150#', '200#'],
+    step_labels: [...STEP_LABELS_14],
+    colour_names: ['C', 'M', 'Y', 'K'],
+    shapes: [],
+  };
+}
+
+// ── Metadata ───────────────────────────────────────────────────────────────
+function populateMetadata() {
+  setField('f-customer',    job.customer);
+  setField('f-stock-desc',  job.stock_desc);
+  setField('f-dot-shape-num', job.dot_shape_number);
+  setField('f-date',        job.date);
+  setField('f-set-num',     job.set_number);
+  setField('f-job-num',     job.job_number);
+}
+
+function setField(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val || '';
+}
+
+function populateDropdowns() {
+  for (const [id, key] of Object.entries(DROPDOWN_KEYS)) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    const opts = (settings[key] && Array.isArray(settings[key])) ? settings[key] : [];
+    sel.innerHTML = '';
+    for (const opt of opts) {
+      const o = document.createElement('option');
+      o.value = o.textContent = opt;
+      sel.appendChild(o);
+    }
+    // Ensure current job value is present
+    const jobVal = job[id.replace('f-', '').replace(/-([a-z])/g, (_,c) => '_'+c)];
+    if (jobVal && !opts.includes(jobVal)) {
+      const o = document.createElement('option');
+      o.value = o.textContent = jobVal;
+      sel.insertBefore(o, sel.firstChild);
+    }
+    sel.value = jobVal || (opts[0] || '');
+  }
+}
+
+// ── Weight chips ───────────────────────────────────────────────────────────
+function renderWeightChips() {
+  const container = document.getElementById('weight-chips');
+  container.innerHTML = '';
+  for (let i = 0; i < job.weight_labels.length; i++) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${escHtml(job.weight_labels[i])}<span class="chip-del" onclick="removeWeightLabel(${i})" title="Remove">&#x2715;</span>`;
+    container.appendChild(chip);
+  }
+}
+
+function addWeightLabel() {
+  const input = document.getElementById('new-chip-input');
+  const val = input.value.trim();
+  if (!val) return;
+  if (!job.weight_labels.includes(val)) {
+    job.weight_labels.push(val);
+    renderWeightChips();
+    pushJob();
+  }
+  input.value = '';
+}
+
+function removeWeightLabel(i) {
+  job.weight_labels.splice(i, 1);
+  renderWeightChips();
+  pushJob();
+}
+
+// ── Step preset ────────────────────────────────────────────────────────────
+function renderStepPreset() {
+  const n = job.step_labels.length;
+  const radios = document.querySelectorAll('input[name="preset"]');
+  for (const r of radios) {
+    r.checked = parseInt(r.value) === n;
+  }
+}
+
+function applyStepPreset(n) {
+  const labels = n === 16 ? [...STEP_LABELS_16] : [...STEP_LABELS_14];
+  job.step_labels = labels;
+  // Resize all weight step arrays
+  for (const shape of job.shapes) {
+    for (const w of shape.weights) {
+      while (w.steps.length < n) w.steps.push([0,0,0,0]);
+      w.steps.length = n;
+    }
+  }
+  renderGrid();
+  pushJob();
+}
+
+// ── Shape tabs ─────────────────────────────────────────────────────────────
+function renderShapeTabs() {
+  const bar = document.getElementById('shape-tab-bar');
+  bar.innerHTML = '';
+  for (let i = 0; i < job.shapes.length; i++) {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (i === activeShapeIdx ? ' active' : '');
+    tab.onclick = () => selectShape(i);
+    tab.innerHTML = `${escHtml(job.shapes[i].name)}<span class="tab-del" onclick="event.stopPropagation();removeShape(${i})" title="Remove shape">&#x2715;</span>`;
+    bar.appendChild(tab);
+  }
+  const add = document.createElement('div');
+  add.className = 'tab-add';
+  add.title = 'Add shape';
+  add.textContent = '+';
+  add.onclick = addShape;
+  bar.appendChild(add);
+  renderWeightTabs();
+}
+
+function selectShape(i) {
+  activeShapeIdx = i;
+  renderShapeTabs();
+}
+
+function addShape() {
+  const name = `Shape ${job.shapes.length + 1}`;
+  job.shapes.push({ name, weights: [makeWeight(0)] });
+  activeWeightIdx.push(0);
+  activeShapeIdx = job.shapes.length - 1;
+  renderShapeTabs();
+  pushJob();
+}
+
+function removeShape(i) {
+  if (!confirm(`Remove "${job.shapes[i].name}"?`)) return;
+  job.shapes.splice(i, 1);
+  activeWeightIdx.splice(i, 1);
+  if (activeShapeIdx >= job.shapes.length) activeShapeIdx = Math.max(0, job.shapes.length - 1);
+  renderShapeTabs();
+  pushJob();
+}
+
+// ── Weight tabs ────────────────────────────────────────────────────────────
+function renderWeightTabs() {
+  const bar = document.getElementById('weight-tab-bar');
+  bar.innerHTML = '';
+  if (job.shapes.length === 0) {
+    renderGrid();
+    return;
+  }
+  const shape = job.shapes[activeShapeIdx];
+  const awi = activeWeightIdx[activeShapeIdx] || 0;
+
+  for (let i = 0; i < shape.weights.length; i++) {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (i === awi ? ' active' : '');
+    tab.onclick = () => selectWeight(i);
+    tab.innerHTML = `${escHtml(shape.weights[i].label)}<span class="tab-del" onclick="event.stopPropagation();removeWeight(${i})" title="Remove weight">&#x2715;</span>`;
+    bar.appendChild(tab);
+  }
+  const add = document.createElement('div');
+  add.className = 'tab-add';
+  add.title = 'Add weight';
+  add.textContent = '+';
+  add.onclick = addWeight;
+  bar.appendChild(add);
+  renderGrid();
+}
+
+function selectWeight(i) {
+  activeWeightIdx[activeShapeIdx] = i;
+  renderWeightTabs();
+}
+
+function addWeight(idx) {
+  const shape = job.shapes[activeShapeIdx];
+  const nextLabel = job.weight_labels[shape.weights.length] || `W${shape.weights.length + 1}`;
+  shape.weights.push(makeWeight(shape.weights.length));
+  activeWeightIdx[activeShapeIdx] = shape.weights.length - 1;
+  renderWeightTabs();
+  pushJob();
+}
+
+function removeWeight(i) {
+  const shape = job.shapes[activeShapeIdx];
+  if (shape.weights.length <= 1) { showToast('Cannot remove last weight', true); return; }
+  if (!confirm(`Remove weight "${shape.weights[i].label}"?`)) return;
+  shape.weights.splice(i, 1);
+  if (activeWeightIdx[activeShapeIdx] >= shape.weights.length)
+    activeWeightIdx[activeShapeIdx] = shape.weights.length - 1;
+  renderWeightTabs();
+  pushJob();
+}
+
+function makeWeight(idx) {
+  const label = job.weight_labels[idx] || `W${idx + 1}`;
+  const n = job.step_labels.length;
+  return { label, density: [0,0,0,0], steps: Array.from({length: n}, () => [0,0,0,0]) };
+}
+
+// ── Grid ───────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const area = document.getElementById('grid-area');
+
+  if (job.shapes.length === 0) {
+    area.innerHTML = '<div class="empty-state"><p>No shapes yet.</p><button onclick="addShape()">+ Add Shape</button></div>';
+    return;
+  }
+
+  const shape = job.shapes[activeShapeIdx];
+  if (!shape || shape.weights.length === 0) {
+    area.innerHTML = '<div class="empty-state"><p>No weights for this shape.</p><button onclick="addWeight()">+ Add Weight</button></div>';
+    return;
+  }
+
+  const awi = activeWeightIdx[activeShapeIdx] || 0;
+  const weight = shape.weights[awi];
+  const stepLabels = job.step_labels;
+  const colours = job.colour_names.length === 4 ? job.colour_names : ['C','M','Y','K'];
+  const N = stepLabels.length; // e.g. 14
+
+  // tabindex layout (column-major):
+  // For colour ci (0-3), editable rows are: density + step[1..N-1]
+  // Each column has N editable cells.
+  // ci=0: ti 1..N, ci=1: ti N+1..2N, etc.
+  function tabIdx(ci, rowType, stepIdx) {
+    // rowType: 'density' | 'step', stepIdx: 1-based step index (0 = 100%, skip)
+    const base = ci * N;
+    if (rowType === 'density') return base + 1;
+    return base + 1 + stepIdx; // stepIdx >= 1
+  }
+
+  const table = document.createElement('table');
+  table.className = 'density-grid';
+
+  // Header
+  const thead = table.createTHead();
+  const hr = thead.insertRow();
+  const th0 = document.createElement('th');
+  th0.className = 'row-header';
+  th0.textContent = 'Step';
+  hr.appendChild(th0);
+  for (const c of colours) {
+    const th = document.createElement('th');
+    th.textContent = c;
+    hr.appendChild(th);
+  }
+
+  const tbody = table.createTBody();
+
+  // Density row
+  {
+    const tr = tbody.insertRow();
+    tr.className = 'density-row';
+    const lbl = tr.insertCell();
+    lbl.className = 'row-label';
+    lbl.textContent = 'Max Density';
+    for (let ci = 0; ci < 4; ci++) {
+      const td = tr.insertCell();
+      const inp = makeInput(weight.density[ci], tabIdx(ci, 'density', 0), (val) => {
+        weight.density[ci] = val;
+        pushJob();
+      });
+      td.appendChild(inp);
+    }
+  }
+
+  // Step rows
+  for (let si = 0; si < stepLabels.length; si++) {
+    const tr = tbody.insertRow();
+    const isReadOnly = si === 0; // 100% row
+    if (isReadOnly) tr.className = 'readonly-row';
+
+    const lbl = tr.insertCell();
+    lbl.className = 'row-label';
+    lbl.textContent = stepLabels[si] + '%';
+
+    for (let ci = 0; ci < 4; ci++) {
+      const td = tr.insertCell();
+      if (isReadOnly) {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'cell-input';
+        inp.readOnly = true;
+        inp.tabIndex = -1;
+        const v = weight.steps[si] ? weight.steps[si][ci] : 0;
+        inp.value = v !== 0 ? String(v) : '';
+        td.appendChild(inp);
+      } else {
+        const ti = tabIdx(ci, 'step', si);
+        const inp = makeInput(weight.steps[si] ? weight.steps[si][ci] : 0, ti, (val) => {
+          if (!weight.steps[si]) weight.steps[si] = [0,0,0,0];
+          weight.steps[si][ci] = val;
+          pushJob();
+        });
+        td.appendChild(inp);
+      }
+    }
+  }
+
+  area.innerHTML = '';
+  area.appendChild(table);
+}
+
+function makeInput(value, ti, onChange) {
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = 'cell-input' + (value !== 0 ? ' has-value' : '');
+  inp.tabIndex = ti;
+  inp.value = value !== 0 ? String(value) : '';
+  inp.inputMode = 'decimal';
+
+  inp.addEventListener('change', () => {
+    const v = parseFloat(inp.value) || 0;
+    inp.classList.toggle('has-value', v !== 0);
+    onChange(v);
+  });
+
+  // 300ms settle timer — auto-advance after X-Rite scan deposits a value
+  inp.addEventListener('input', () => {
+    clearTimeout(settleTimer);
+    if (inp.value.trim() !== '') {
+      settleTimer = setTimeout(() => {
+        if (document.activeElement === inp && inp.value.trim() !== '') {
+          const next = document.querySelector(`[tabindex="${ti + 1}"]`);
+          if (next) {
+            const v = parseFloat(inp.value) || 0;
+            inp.classList.toggle('has-value', v !== 0);
+            onChange(v);
+            next.focus();
+            next.select();
+          }
+        }
+      }, 300);
+    }
+  });
+
+  inp.addEventListener('focus', () => inp.select());
+  return inp;
+}
+
+// ── Session save / load ────────────────────────────────────────────────────
+function saveSession() {
+  const filename = (job.job_number || 'session') + '.json';
+  const blob = new Blob([JSON.stringify(job, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, filename);
+  showToast('Session saved');
+}
+
+function loadSessionFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const loaded = JSON.parse(e.target.result);
+      await fetch('/api/job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loaded),
+      });
+      job = loaded;
+      activeShapeIdx = 0;
+      activeWeightIdx = job.shapes.map(() => 0);
+      populateMetadata();
+      populateDropdowns();
+      renderWeightChips();
+      renderStepPreset();
+      renderShapeTabs();
+      showToast('Session loaded');
+    } catch (err) {
+      showToast('Failed to load session: ' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ── Export Excel ───────────────────────────────────────────────────────────
+async function exportExcel() {
+  showToast('Exporting Excel…');
+  try {
+    const r = await fetch('/api/export/excel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(job),
+    });
+    if (!r.ok) {
+      const msg = await r.text();
+      showToast('Excel export failed: ' + msg, true);
+      return;
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : (job.job_number || 'export') + '.xlsx';
+    downloadBlob(blob, filename);
+    showToast('Excel exported');
+  } catch (err) {
+    showToast('Excel export error: ' + err.message, true);
+  }
+}
+
+// ── Export PDF (via companion) ─────────────────────────────────────────────
+async function probeCompanion() {
+  try {
+    const r = await fetch('http://localhost:7432/health', {
+      signal: AbortSignal.timeout(700),
+    });
+    companionAvailable = r.ok;
+  } catch {
+    companionAvailable = false;
+  }
+  updatePdfButton();
+}
+
+function updatePdfButton() {
+  const btn = document.getElementById('pdf-btn');
+  if (companionAvailable) {
+    btn.disabled = false;
+    btn.title = '';
+  } else {
+    btn.disabled = true;
+    btn.title = 'Start companion (ink-density-tool.exe --companion) to enable PDF export';
+  }
+}
+
+async function exportPDF() {
+  if (!companionAvailable) return;
+  showToast('Exporting PDF via Illustrator…');
+  try {
+    const r = await fetch('http://localhost:7432/export/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(job),
+    });
+    if (!r.ok) {
+      const msg = await r.text();
+      showToast('PDF export failed: ' + msg, true);
+      return;
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : (job.job_number || 'export') + '.pdf';
+    downloadBlob(blob, filename);
+    showToast('PDF exported');
+  } catch (err) {
+    showToast('PDF export error: ' + err.message, true);
+    companionAvailable = false;
+    updatePdfButton();
+  }
+}
+
+// ── Settings modal ─────────────────────────────────────────────────────────
+function buildXcmFields() {
+  const container = document.getElementById('xcm-fields');
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+  for (const f of XCM_FIELDS) {
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    row.innerHTML = `<label>${escHtml(f.label)}</label><input id="xcm-${f.key}" type="text" placeholder="${escHtml(f.dflt)}">`;
+    grid.appendChild(row);
+  }
+  container.appendChild(grid);
+}
+
+function openSettings() {
+  // Server settings
+  document.getElementById('s-excel-template').value = settings['excel_template'] || '';
+  // Build XCM fields
+  for (const f of XCM_FIELDS) {
+    const el = document.getElementById(`xcm-${f.key}`);
+    if (el) el.value = settings[f.key] || '';
+  }
+  // Try to fetch companion settings
+  fetchCompanionSettings();
+  document.getElementById('modal-overlay').hidden = false;
+}
+
+async function fetchCompanionSettings() {
+  if (!companionAvailable) return;
+  try {
+    const r = await fetch('http://localhost:7432/settings');
+    const cs = await r.json();
+    document.getElementById('s-illustrator-path').value = cs['illustrator_path'] || '';
+    document.getElementById('s-ai-template').value = cs['ai_template'] || '';
+    document.getElementById('s-ai-template-ext').value = cs['ai_template_extended'] || '';
+  } catch { /* companion may not be running */ }
+}
+
+async function saveSettings() {
+  // Server settings patch
+  const serverPatch = { excel_template: document.getElementById('s-excel-template').value };
+  for (const f of XCM_FIELDS) {
+    const el = document.getElementById(`xcm-${f.key}`);
+    if (el) serverPatch[f.key] = el.value;
+  }
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(serverPatch),
+    });
+    Object.assign(settings, serverPatch);
+  } catch (e) {
+    showToast('Failed to save server settings: ' + e.message, true);
+  }
+
+  // Companion settings patch (if companion is running)
+  if (companionAvailable) {
+    const companionPatch = {
+      illustrator_path:    document.getElementById('s-illustrator-path').value,
+      ai_template:         document.getElementById('s-ai-template').value,
+      ai_template_extended: document.getElementById('s-ai-template-ext').value,
+    };
+    try {
+      await fetch('http://localhost:7432/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(companionPatch),
+      });
+    } catch { /* non-fatal */ }
+  }
+
+  closeSettings();
+  showToast('Settings saved');
+}
+
+function closeSettings() {
+  document.getElementById('modal-overlay').hidden = true;
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'error' : '';
+  t.hidden = false;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.hidden = true; }, 3500);
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// Close modal on overlay click
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+// Escape key closes modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSettings();
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

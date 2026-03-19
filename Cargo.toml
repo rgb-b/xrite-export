@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2021"
 description = "CMYK ink density recording tool for print professionals"
 
+[features]
+web = ["dep:axum", "dep:tokio"]
+
 [dependencies]
+# Web server (optional — enable with --features web)
+axum  = { version = "0.7", optional = true }
+tokio = { version = "1",   features = ["full"], optional = true }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
