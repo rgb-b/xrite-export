@@ -158,17 +158,30 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
     let title = job.heading();
     let dot_shape = job.dot_shape();
 
-    let sheet_count = book.get_sheet_collection().len();
+    // Pre-clone all needed sheets from the clean template pair BEFORE writing
+    // any data, so clones always come from pristine template sheets.
+    let total_needed = sheet_offset + job.shapes.len() * 2;
+    while book.get_sheet_collection().len() < total_needed {
+        let n = book.get_sheet_collection().len();
+        let mut s = book
+            .get_sheet_collection()
+            .get(sheet_offset)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Template sheet at index {} not found", sheet_offset))?;
+        s.set_name(format!("Sheet{}", n + 1));
+        let mut d = book
+            .get_sheet_collection()
+            .get(sheet_offset + 1)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Template sheet at index {} not found", sheet_offset + 1))?;
+        d.set_name(format!("Sheet{}", n + 2));
+        book.get_sheet_collection_mut().push(s);
+        book.get_sheet_collection_mut().push(d);
+    }
 
     for (shape_idx, shape) in job.shapes.iter().enumerate() {
         let single_idx = sheet_offset + shape_idx * 2;
         let dual_idx = sheet_offset + shape_idx * 2 + 1;
-
-        // Ensure template has enough sheets; clone first pair if needed.
-        while book.get_sheet_collection().len() <= dual_idx {
-            clone_first_pair(&mut book)?;
-        }
-        let _ = sheet_count;
 
         // --- Single sheet: weight[0] ---
         {
@@ -213,9 +226,15 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
                 write_steps(ws, &w2.steps, step_start_t2, num_steps, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t2)).set_value(&w2.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t2)).set_value(&dot_shape);
-                fix_second_table_formulas(ws, step_start_t2, num_steps);
+                // F-column average formulas are preserved from the cloned template — do not overwrite.
             }
         }
+    }
+
+    // Remove the unused standard-template sheets (indices 0..sheet_offset) when the
+    // extended template pair was used, so the output doesn't contain blank sheets.
+    if sheet_offset > 0 {
+        book.get_sheet_collection_mut().drain(0..sheet_offset);
     }
 
     if let Some(parent) = output_path.parent() {
@@ -278,22 +297,36 @@ fn fix_second_table_formulas(
     for i in 0..num_steps {
         let r = start_row + i;
         ws.get_cell_mut(addr(6, r))
-            .set_value(format!("=SUM(B{r}:E{r})/4"));
+            .set_formula(format!("SUM(B{r}:E{r})/4"));
     }
 }
 
 // ── Sheet cloning ─────────────────────────────────────────────────────────────
 
-/// Append a blank sheet pair by adding two new empty sheets.
+/// Append a cloned sheet pair by copying the previous two sheets.
 fn clone_first_pair(book: &mut umya_spreadsheet::Spreadsheet) -> Result<()> {
     let existing_count = book.get_sheet_collection().len();
-    let new_single_name = format!("Sheet{}", existing_count + 1);
-    let new_dual_name = format!("Sheet{}", existing_count + 2);
+    if existing_count < 2 {
+        anyhow::bail!("Template has fewer than 2 sheets; cannot clone pair");
+    }
 
-    book.new_sheet(&new_single_name)
-        .map_err(|e| anyhow::anyhow!("Failed to add sheet: {:?}", e))?;
-    book.new_sheet(&new_dual_name)
-        .map_err(|e| anyhow::anyhow!("Failed to add sheet: {:?}", e))?;
+    let mut cloned_single = book
+        .get_sheet_collection()
+        .get(existing_count - 2)
+        .ok_or_else(|| anyhow::anyhow!("Source single sheet not found"))?
+        .clone();
+    cloned_single.set_name(format!("Sheet{}", existing_count + 1));
+
+    let mut cloned_dual = book
+        .get_sheet_collection()
+        .get(existing_count - 1)
+        .ok_or_else(|| anyhow::anyhow!("Source dual sheet not found"))?
+        .clone();
+    cloned_dual.set_name(format!("Sheet{}", existing_count + 2));
+
+    book.get_sheet_collection_mut().push(cloned_single);
+    book.get_sheet_collection_mut().push(cloned_dual);
 
     Ok(())
 }
+
