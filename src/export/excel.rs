@@ -194,7 +194,8 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
 
             if let Some(w0) = shape.weights.get(0) {
                 write_density(ws, &w0.density, cm.step_start_row - cm.density_row_offset, &data_cols);
-                write_steps(ws, &w0.steps, cm.step_start_row, num_steps, &data_cols);
+                write_hundred_row(ws, cm.step_start_row, &data_cols);
+                write_steps(ws, &w0.steps[1..], cm.step_start_row + 1, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t1)).set_value(&w0.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t1)).set_value(&dot_shape);
             }
@@ -211,7 +212,8 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
 
             if let Some(w1) = shape.weights.get(1) {
                 write_density(ws, &w1.density, cm.step_start_row - cm.density_row_offset, &data_cols);
-                write_steps(ws, &w1.steps, cm.step_start_row, num_steps, &data_cols);
+                write_hundred_row(ws, cm.step_start_row, &data_cols);
+                write_steps(ws, &w1.steps[1..], cm.step_start_row + 1, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t1)).set_value(&w1.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t1)).set_value(&dot_shape);
             }
@@ -223,7 +225,8 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
                 ws.get_cell_mut(addr(cm.date_col, title_t2_row)).set_value(&job.date);
 
                 write_density(ws, &w2.density, step_start_t2 - cm.density_row_offset, &data_cols);
-                write_steps(ws, &w2.steps, step_start_t2, num_steps, &data_cols);
+                write_hundred_row(ws, step_start_t2, &data_cols);
+                write_steps(ws, &w2.steps[1..], step_start_t2 + 1, &data_cols);
                 ws.get_cell_mut(addr(cm.label_col, label_t2)).set_value(&w2.label);
                 ws.get_cell_mut(addr(cm.dot_shape_col, label_t2)).set_value(&dot_shape);
                 // F-column average formulas are preserved from the cloned template — do not overwrite.
@@ -265,19 +268,21 @@ fn write_density(
     }
 }
 
+/// Write 100.0 into every data column at `row` (the locked 100% step row).
+fn write_hundred_row(ws: &mut umya_spreadsheet::Worksheet, row: u32, data_cols: &[u32; 4]) {
+    for &col in data_cols.iter() {
+        ws.get_cell_mut(addr(col, row)).set_value("100");
+    }
+}
+
 /// Write step data rows into the configured data columns starting at `start_row`.
 fn write_steps(
     ws: &mut umya_spreadsheet::Worksheet,
     steps: &[[f64; 4]],
     start_row: u32,
-    num_steps: u32,
     data_cols: &[u32; 4],
 ) {
-    for ri in 0..num_steps as usize {
-        if ri >= steps.len() {
-            break;
-        }
-        let row_data = &steps[ri];
+    for (ri, row_data) in steps.iter().enumerate() {
         let excel_row = start_row + ri as u32;
         for (ci, &col) in data_cols.iter().enumerate() {
             let v = row_data[ci];
