@@ -14,6 +14,7 @@
 use std::collections::HashMap;
 
 use axum::{
+    extract::Query,
     http::StatusCode,
     response::Response,
     routing::{get, post},
@@ -31,9 +32,10 @@ pub fn run() {
 
 async fn serve() {
     let app = Router::new()
-        .route("/health",     get(health).options(preflight))
-        .route("/export/pdf", post(export_pdf).options(preflight))
-        .route("/settings",   get(get_settings).post(patch_settings).options(preflight));
+        .route("/health",      get(health).options(preflight))
+        .route("/export/pdf",  post(export_pdf).options(preflight))
+        .route("/settings",    get(get_settings).post(patch_settings).options(preflight))
+        .route("/browse/file", get(browse_file).options(preflight));
 
     let listener = TcpListener::bind("127.0.0.1:7432")
         .await
@@ -96,6 +98,32 @@ async fn export_pdf(Json(job): Json<JobConfig>) -> Response {
                 .body(bytes.into())
                 .unwrap()
         }
+        Err(e) => pna_err(e.to_string()),
+    }
+}
+
+/// Open a native file-picker dialog on the Windows PC and return the selected path.
+/// Query param: `filter=ai` for .ai files, `filter=xlsx` for .xlsx, omit for all files.
+/// Returns 200 `{"path": "..."}` on selection, 204 if the user cancelled.
+async fn browse_file(Query(params): Query<HashMap<String, String>>) -> Response {
+    let filter = params.get("filter").cloned().unwrap_or_default();
+    let result = tokio::task::spawn_blocking(move || {
+        let mut dialog = rfd::FileDialog::new();
+        dialog = match filter.as_str() {
+            "ai"   => dialog.add_filter("Illustrator Template", &["ai"]).add_filter("All Files", &["*"]),
+            "xlsx" => dialog.add_filter("Excel Template", &["xlsx"]).add_filter("All Files", &["*"]),
+            _      => dialog.add_filter("All Files", &["*"]),
+        };
+        dialog.pick_file()
+    })
+    .await;
+
+    match result {
+        Ok(Some(path)) => {
+            let body = serde_json::json!({ "path": path.to_string_lossy() }).to_string();
+            pna(StatusCode::OK, "application/json", body.into_bytes())
+        }
+        Ok(None) => pna(StatusCode::NO_CONTENT, "text/plain", b"Cancelled".to_vec()),
         Err(e) => pna_err(e.to_string()),
     }
 }

@@ -470,6 +470,18 @@ body {
   font-size: 11px;
   color: var(--text-muted);
 }
+.locate-btn {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.locate-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 #modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -522,6 +534,7 @@ body {
   <button class="tbtn" onclick="document.getElementById('session-file').click()">&#128194; Load Session</button>
   <input id="session-file" type="file" accept=".json" hidden onchange="loadSessionFile(event)">
   <button class="tbtn primary" onclick="exportExcel()">&#128202; Export Excel</button>
+  <button class="tbtn" onclick="exportSVG()">&#9698; Export SVG</button>
   <button class="tbtn" id="pdf-btn" onclick="exportPDF()">&#128196; Export PDF</button>
   <button class="tbtn" onclick="openSettings()">&#9881; Settings</button>
 </header>
@@ -572,7 +585,7 @@ body {
       </div>
     </div>
 
-    <div class="section-label">Weight Labels</div>
+    <div class="section-label">LPI Labels</div>
     <div id="weight-chips"></div>
     <div class="chip-add-row">
       <input id="new-chip-input" type="text" placeholder="e.g. 175#" maxlength="10"
@@ -618,17 +631,24 @@ body {
       </div>
       <div class="settings-row">
         <label>AI Template (Standard 14-step)</label>
-        <input id="s-ai-template" type="text" placeholder="C:\templates\template.ai">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input id="s-ai-template" type="text" placeholder="C:\templates\template.ai" style="flex:1;">
+          <button id="locate-ai-template" class="locate-btn" onclick="locateFile('s-ai-template','ai')" title="Browse on companion PC">Locate…</button>
+        </div>
       </div>
       <div class="settings-row">
         <label>AI Template (Extended 16-step)</label>
-        <input id="s-ai-template-ext" type="text" placeholder="C:\templates\template_extended.ai">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input id="s-ai-template-ext" type="text" placeholder="C:\templates\template_extended.ai" style="flex:1;">
+          <button id="locate-ai-template-ext" class="locate-btn" onclick="locateFile('s-ai-template-ext','ai')" title="Browse on companion PC">Locate…</button>
+        </div>
       </div>
 
       <div class="settings-section-title">Excel Cell Mapping</div>
       <div id="xcm-fields"></div>
     </div>
     <div id="modal-footer">
+      <a href="/api/export/builder-script" download style="font-size:12px;color:var(--accent);text-decoration:none;align-self:center;margin-right:auto;">&#8595; Builder Script</a>
       <button onclick="closeSettings()">Cancel</button>
       <button class="primary" onclick="saveSettings()">Save Settings</button>
     </div>
@@ -637,6 +657,9 @@ body {
 
 <!-- Toast -->
 <div id="toast" hidden></div>
+
+<!-- Build version footer -->
+<div id="build-footer" style="position:fixed;bottom:0;right:0;padding:2px 8px;font-size:10px;color:#999;background:rgba(0,0,0,0.03);pointer-events:none;"></div>
 
 <script>
 'use strict';
@@ -683,6 +706,17 @@ async function init() {
   renderStepPreset();
   renderShapeTabs();
   probeCompanion();
+  fetchBuildVersion();
+}
+
+async function fetchBuildVersion() {
+  try {
+    const r = await fetch('/api/version');
+    const { build_ts } = await r.json();
+    const d = new Date(Number(build_ts) * 1000);
+    const fmt = d.toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('build-footer').textContent = `built ${fmt}`;
+  } catch {}
 }
 
 async function fetchJob() {
@@ -778,12 +812,23 @@ function renderWeightChips() {
   }
 }
 
+function syncWeightLabels() {
+  for (const shape of job.shapes) {
+    for (let i = 0; i < shape.weights.length; i++) {
+      if (i < job.weight_labels.length) {
+        shape.weights[i].label = job.weight_labels[i];
+      }
+    }
+  }
+}
+
 function addWeightLabel() {
   const input = document.getElementById('new-chip-input');
   const val = input.value.trim();
   if (!val) return;
   if (!job.weight_labels.includes(val)) {
     job.weight_labels.push(val);
+    syncWeightLabels();
     renderWeightChips();
     pushJob();
   }
@@ -792,6 +837,7 @@ function addWeightLabel() {
 
 function removeWeightLabel(i) {
   job.weight_labels.splice(i, 1);
+  syncWeightLabels();
   renderWeightChips();
   pushJob();
 }
@@ -820,6 +866,30 @@ function applyStepPreset(n) {
 }
 
 // ── Shape tabs ─────────────────────────────────────────────────────────────
+function startRenameShape(i, nameSpan, tab) {
+  if (activeShapeIdx !== i) { activeShapeIdx = i; renderShapeTabs(); return; }
+  const input = document.createElement('input');
+  input.value = job.shapes[i].name;
+  input.style.cssText = 'font:inherit;background:transparent;border:none;outline:1px solid currentColor;width:6em;padding:0 2px;color:inherit;';
+  nameSpan.replaceWith(input);
+  input.focus();
+  input.select();
+  let committed = false;
+  function commit() {
+    if (committed) return;
+    committed = true;
+    const v = input.value.trim();
+    if (v) job.shapes[i].name = v;
+    pushJob();
+    renderShapeTabs();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { committed = true; renderShapeTabs(); }
+  });
+}
+
 function renderShapeTabs() {
   const bar = document.getElementById('shape-tab-bar');
   bar.innerHTML = '';
@@ -827,7 +897,17 @@ function renderShapeTabs() {
     const tab = document.createElement('div');
     tab.className = 'tab' + (i === activeShapeIdx ? ' active' : '');
     tab.onclick = () => selectShape(i);
-    tab.innerHTML = `${escHtml(job.shapes[i].name)}<span class="tab-del" onclick="event.stopPropagation();removeShape(${i})" title="Remove shape">&#x2715;</span>`;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = job.shapes[i].name;
+    nameSpan.title = 'Double-click to rename';
+    nameSpan.ondblclick = e => { e.stopPropagation(); startRenameShape(i, nameSpan, tab); };
+    const del = document.createElement('span');
+    del.className = 'tab-del';
+    del.title = 'Remove shape';
+    del.innerHTML = '&#x2715;';
+    del.onclick = e => { e.stopPropagation(); removeShape(i); };
+    tab.appendChild(nameSpan);
+    tab.appendChild(del);
     bar.appendChild(tab);
   }
   const add = document.createElement('div');
@@ -840,6 +920,7 @@ function renderShapeTabs() {
 }
 
 function selectShape(i) {
+  if (activeShapeIdx === i) return;
   activeShapeIdx = i;
   renderShapeTabs();
 }
@@ -1123,6 +1204,23 @@ async function exportExcel() {
   }
 }
 
+// ── Export SVG ─────────────────────────────────────────────────────────────
+async function exportSVG() {
+  showToast('Generating SVG…');
+  try {
+    const r = await fetch('/api/export/svg', { method: 'POST' });
+    if (!r.ok) throw new Error(await r.text());
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (job?.job_number || 'export') + '.svg';
+    a.click();
+    showToast('SVG downloaded');
+  } catch (e) {
+    showToast('SVG export error: ' + e.message, true);
+  }
+}
+
 // ── Export PDF (via companion) ─────────────────────────────────────────────
 async function probeCompanion() {
   try {
@@ -1144,6 +1242,23 @@ function updatePdfButton() {
   } else {
     btn.disabled = true;
     btn.title = 'Start companion (ink-density-tool.exe --companion) to enable PDF export';
+  }
+  for (const el of document.querySelectorAll('.locate-btn')) {
+    el.disabled = !companionAvailable;
+    el.title = companionAvailable ? 'Browse on companion PC' : 'Start companion to enable';
+  }
+}
+
+async function locateFile(inputId, filter) {
+  if (!companionAvailable) return;
+  try {
+    const r = await fetch(`http://localhost:7432/browse/file?filter=${filter}`);
+    if (r.status === 204) return;  // user cancelled
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    if (data.path) document.getElementById(inputId).value = data.path;
+  } catch (e) {
+    showToast('Could not open file browser: ' + e.message, true);
   }
 }
 

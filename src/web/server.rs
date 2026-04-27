@@ -1,12 +1,14 @@
 //! Main web server — axum :8181
 //!
 //! Routes:
-//!   GET  /                    → serve embedded index.html
-//!   GET  /api/job             → current JobConfig as JSON
-//!   POST /api/job             → replace in-memory job state
-//!   GET  /api/settings        → settings JSON
-//!   POST /api/settings        → patch settings (key/value object)
-//!   POST /api/export/excel    → body = JobConfig JSON → stream .xlsx
+//!   GET  /                             → serve embedded index.html
+//!   GET  /api/job                      → current JobConfig as JSON
+//!   POST /api/job                      → replace in-memory job state
+//!   GET  /api/settings                 → settings JSON
+//!   POST /api/settings                 → patch settings (key/value object)
+//!   POST /api/export/excel             → body = JobConfig JSON → stream .xlsx
+//!   POST /api/export/svg               → current in-memory job → stream .svg
+//!   GET  /api/export/builder-script    → download build_ai_template.jsx
 
 use std::sync::{Arc, Mutex};
 
@@ -25,6 +27,8 @@ use crate::settings;
 type SharedJob = Arc<Mutex<JobConfig>>;
 
 const INDEX_HTML: &[u8] = include_bytes!("../../assets/index.html");
+const BUILDER_JSX: &[u8] = include_bytes!("../../assets/build_ai_template.jsx");
+const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");
 
 pub fn run() {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -40,6 +44,9 @@ async fn serve() {
         .route("/api/job", get(get_job).post(set_job))
         .route("/api/settings", get(get_settings).post(patch_settings))
         .route("/api/export/excel", post(export_excel))
+        .route("/api/export/svg", post(export_svg_handler))
+        .route("/api/export/builder-script", get(download_builder_script))
+        .route("/api/version", get(get_version))
         .with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:8181")
@@ -127,6 +134,41 @@ async fn export_excel(Json(job): Json<JobConfig>) -> Response {
         }
         Err(e) => error_response(e.to_string()),
     }
+}
+
+async fn export_svg_handler(State(state): State<SharedJob>) -> Response {
+    let job = state.lock().unwrap().clone();
+    let svg = crate::export::svg::export_svg(&job);
+    let filename = if job.job_number.is_empty() {
+        "export.svg".to_string()
+    } else {
+        format!("{}.svg", job.job_number)
+    };
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "image/svg+xml")
+        .header(
+            "Content-Disposition",
+            format!("attachment; filename=\"{filename}\""),
+        )
+        .body(svg.into_bytes().into())
+        .unwrap()
+}
+
+async fn get_version() -> Response {
+    json_response(&serde_json::json!({ "build_ts": BUILD_TIMESTAMP }))
+}
+
+async fn download_builder_script() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/javascript")
+        .header(
+            "Content-Disposition",
+            "attachment; filename=\"build_ai_template.jsx\"",
+        )
+        .body(BUILDER_JSX.to_vec().into())
+        .unwrap()
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
