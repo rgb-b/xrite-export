@@ -120,13 +120,14 @@ fn addr(col: u32, row: u32) -> String {
     format!("{}{}", col_letter(col), row)
 }
 
-/// Format a float for cell entry: blank for 0, otherwise strip trailing zeros.
-fn fmt_num(v: f64) -> String {
-    if v == 0.0 {
-        return String::new();
-    }
-    let s = format!("{:.6}", v);
-    s.trim_end_matches('0').trim_end_matches('.').to_string()
+/// Format a density value: blank for 0, otherwise 2 decimal places.
+fn fmt_density(v: f64) -> String {
+    if v == 0.0 { String::new() } else { format!("{:.2}", v) }
+}
+
+/// Format a step value: blank for 0, otherwise 1 decimal place.
+fn fmt_step(v: f64) -> String {
+    if v == 0.0 { String::new() } else { format!("{:.1}", v) }
 }
 
 // ── Export entry point ────────────────────────────────────────────────────────
@@ -191,6 +192,7 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
 
             ws.get_cell_mut(addr(cm.title_col, 1)).set_value(&title);
             ws.get_cell_mut(addr(cm.date_col, 1)).set_value(&job.date);
+            ws.get_cell_mut(addr(cm.title_col, 2)).set_value(&shape.name);
 
             if let Some(w0) = shape.weights.get(0) {
                 write_density(ws, &w0.density, cm.step_start_row - cm.density_row_offset, &data_cols);
@@ -209,6 +211,7 @@ pub fn export_excel(job: &JobConfig, output_path: &Path) -> Result<()> {
 
             ws.get_cell_mut(addr(cm.title_col, 1)).set_value(&title);
             ws.get_cell_mut(addr(cm.date_col, 1)).set_value(&job.date);
+            ws.get_cell_mut(addr(cm.title_col, 2)).set_value(&shape.name);
 
             if let Some(w1) = shape.weights.get(1) {
                 write_density(ws, &w1.density, cm.step_start_row - cm.density_row_offset, &data_cols);
@@ -263,7 +266,7 @@ fn write_density(
     for (ci, &col) in data_cols.iter().enumerate() {
         let v = density[ci];
         if v != 0.0 {
-            ws.get_cell_mut(addr(col, density_row)).set_value(fmt_num(v));
+            ws.get_cell_mut(addr(col, density_row)).set_value(fmt_density(v));
         }
     }
 }
@@ -287,7 +290,7 @@ fn write_steps(
         for (ci, &col) in data_cols.iter().enumerate() {
             let v = row_data[ci];
             if v != 0.0 {
-                ws.get_cell_mut(addr(col, excel_row)).set_value(fmt_num(v));
+                ws.get_cell_mut(addr(col, excel_row)).set_value(fmt_step(v));
             }
         }
     }
