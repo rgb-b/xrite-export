@@ -5,10 +5,12 @@
 //!   GET  /api/job                      → current JobConfig as JSON
 //!   POST /api/job                      → replace in-memory job state
 //!   GET  /api/settings                 → settings JSON
-//!   POST /api/settings                 → patch settings (key/value object)
+//!   POST /api/settings                 → replace settings
 //!   POST /api/export/excel             → body = JobConfig JSON → stream .xlsx
-//!   POST /api/export/svg               → current in-memory job → stream .svg
+//!   POST /api/export/report            → body = JobConfig JSON → print-ready HTML
+//!   POST /api/export/svg               → body = JobConfig JSON → stream .svg
 //!   GET  /api/export/builder-script    → download build_ai_template.jsx
+//!   GET  /api/version                  → { build_ts }
 
 use std::sync::{Arc, Mutex};
 
@@ -22,7 +24,7 @@ use axum::{
 use tokio::net::TcpListener;
 
 use crate::core::models::JobConfig;
-use crate::settings;
+use crate::settings::{self, Settings};
 
 type SharedJob = Arc<Mutex<JobConfig>>;
 
@@ -42,8 +44,9 @@ async fn serve() {
     let app = Router::new()
         .route("/", get(index))
         .route("/api/job", get(get_job).post(set_job))
-        .route("/api/settings", get(get_settings).post(patch_settings))
+        .route("/api/settings", get(get_settings).post(put_settings))
         .route("/api/export/excel", post(export_excel))
+        .route("/api/export/report", post(export_report))
         .route("/api/export/svg", post(export_svg_handler))
         .route("/api/export/builder-script", get(download_builder_script))
         .route("/api/version", get(get_version))
@@ -61,8 +64,7 @@ fn restore_last_session() -> Option<JobConfig> {
     if path_str.is_empty() {
         return None;
     }
-    let path = std::path::Path::new(&path_str);
-    crate::core::session::load_session(path).ok()
+    crate::core::session::load_session(std::path::Path::new(&path_str)).ok()
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -93,12 +95,8 @@ async fn get_settings() -> Response {
     json_response(&s)
 }
 
-async fn patch_settings(Json(patch): Json<serde_json::Value>) -> impl IntoResponse {
-    if let Some(obj) = patch.as_object() {
-        for (key, value) in obj {
-            settings::set(key, value.clone());
-        }
-    }
+async fn put_settings(Json(new_settings): Json<Settings>) -> impl IntoResponse {
+    let _ = settings::save(&new_settings);
     StatusCode::OK
 }
 
@@ -136,8 +134,16 @@ async fn export_excel(Json(job): Json<JobConfig>) -> Response {
     }
 }
 
-async fn export_svg_handler(State(state): State<SharedJob>) -> Response {
-    let job = state.lock().unwrap().clone();
+async fn export_report(Json(job): Json<JobConfig>) -> Response {
+    let html = crate::export::report::generate_report(&job);
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/html; charset=utf-8")
+        .body(html.into())
+        .unwrap()
+}
+
+async fn export_svg_handler(Json(job): Json<JobConfig>) -> Response {
     let svg = crate::export::svg::export_svg(&job);
     let filename = if job.job_number.is_empty() {
         "export.svg".to_string()
