@@ -2,19 +2,17 @@ use std::collections::HashMap;
 
 use crate::core::models::{JobConfig, ShapeData, WeightData};
 
+// Placeholder slots for the Illustrator template: always CMYK columns 0–3.
 const COLOUR_SUFFIXES: &[&str] = &["C", "M", "Y", "K"];
 
-/// Format a float for insertion into templates (strip trailing zeros, blank for 0).
+/// Format a float for template insertion (strip trailing zeros, blank for 0).
 pub fn fmt_value(v: f64) -> String {
     if v == 0.0 {
         return String::new();
     }
-    // Equivalent to Python's f"{v:.4g}"
     let s = format!("{:.4}", v);
-    // Trim trailing zeros after decimal point
     if s.contains('.') {
         let trimmed = s.trim_end_matches('0').trim_end_matches('.');
-        // But if we trimmed everything, use the 4g-style format
         if trimmed.is_empty() || trimmed == "-" {
             String::new()
         } else {
@@ -32,12 +30,12 @@ pub fn build_placeholders(
     chunk: &[&WeightData],
 ) -> HashMap<String, String> {
     let heading = job.heading();
-    let dot_shape = job.dot_shape();
+    let shape_name = shape.display_name();
 
     let mut ph = HashMap::new();
     ph.insert("<<CUSTOMER>>".into(), heading);
     ph.insert("<<STOCK>>".into(), String::new());
-    ph.insert("<<CRS>>".into(), dot_shape);
+    ph.insert("<<CRS>>".into(), shape_name.clone());
     ph.insert("<<DATE>>".into(), job.date.clone());
     ph.insert(
         "<<SET>>".into(),
@@ -55,23 +53,30 @@ pub fn build_placeholders(
             format!("Job {}", job.job_number)
         },
     );
-    ph.insert("<<SHAPE>>".into(), shape.name.clone());
+    ph.insert("<<SHAPE>>".into(), shape_name);
 
     for wn in 1..=3 {
         let weight = chunk.get(wn - 1).copied();
-        ph.insert(format!("<<W{wn}_LABEL>>"), weight.map(|w| w.label.clone()).unwrap_or_default());
+        ph.insert(format!("<<W{wn}_LABEL>>"), weight.map(|w| w.lpi.clone()).unwrap_or_default());
 
-        // Density row
+        // Density row — use first 4 ink channels as C/M/Y/K
         for (ci, suffix) in COLOUR_SUFFIXES.iter().enumerate() {
-            let val = weight.map(|w| w.density[ci]).unwrap_or(0.0);
+            let val = weight
+                .and_then(|w| w.density.get(ci))
+                .copied()
+                .unwrap_or(0.0);
             ph.insert(format!("<<W{wn}_D{suffix}>>"), fmt_value(val));
         }
 
-        // Step rows — generate one placeholder per actual step in the job.
+        // Step rows
         for ri in 0..job.step_labels.len() {
             let rn = ri + 1;
             for (ci, suffix) in COLOUR_SUFFIXES.iter().enumerate() {
-                let val = weight.and_then(|w| w.steps.get(ri)).map(|row| row[ci]).unwrap_or(0.0);
+                let val = weight
+                    .and_then(|w| w.steps.get(ri))
+                    .and_then(|row| row.get(ci))
+                    .copied()
+                    .unwrap_or(0.0);
                 ph.insert(format!("<<W{wn}_R{rn:02}_{suffix}>>"), fmt_value(val));
             }
         }

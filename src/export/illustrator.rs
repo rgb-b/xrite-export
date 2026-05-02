@@ -103,7 +103,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
     }
     for shape in &job.shapes {
         if shape.weights.is_empty() {
-            bail!("Shape '{}' has no LPIs. Add at least one before exporting.", shape.name);
+            bail!("Shape '{}' has no LPIs. Add at least one before exporting.", shape.display_name());
         }
     }
 
@@ -115,7 +115,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
 
         for (chunk_idx, chunk) in chunks.iter().enumerate() {
             let safe_name: String = shape
-                .name
+                .display_name()
                 .chars()
                 .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' { c } else { '_' })
                 .collect();
@@ -139,7 +139,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
                         let mut msg = format!(
                             "Illustrator returned exit code {:?} for shape '{}' chunk {}",
                             output.status.code(),
-                            shape.name,
+                            shape.display_name(),
                             chunk_idx + 1
                         );
                         if !stderr.is_empty() {
@@ -152,7 +152,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
                 Err(e) => {
                     bail!(
                         "Failed to run Illustrator for shape '{}' chunk {}: {e}",
-                        shape.name,
+                        shape.display_name(),
                         chunk_idx + 1
                     );
                 }
@@ -161,7 +161,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
             if !out_pdf.is_file() {
                 bail!(
                     "Illustrator did not produce a PDF for shape '{}' chunk {}",
-                    shape.name,
+                    shape.display_name(),
                     chunk_idx + 1
                 );
             }

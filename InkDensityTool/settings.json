@@ -1,0 +1,60 @@
+{
+  "illustrator_path": "",
+  "default_weight_labels": [
+    "120#",
+    "150#",
+    "200#"
+  ],
+  "xcm_density_row_offset": "1",
+  "last_session_path": "",
+  "dropdown_finishes": [
+    "RP",
+    "SP",
+    "CBW SP"
+  ],
+  "xcm_step_start_row": "4",
+  "xcm_data_col_k": "E",
+  "dropdown_dot_shape_types": [
+    "CRS",
+    "CRY",
+    "HD",
+    "ESXR"
+  ],
+  "xcm_data_col_y": "D",
+  "xcm_label_col": "A",
+  "xcm_dot_shape_col": "I",
+  "default_xlsx_path": "/home/el/Documents/El-Projects/data-export/DGC-curve-calculator.xlsx",
+  "default_step_labels": [
+    "100",
+    "95",
+    "90",
+    "80",
+    "70",
+    "60",
+    "50",
+    "40",
+    "30",
+    "20",
+    "10",
+    "5",
+    "3",
+    "1"
+  ],
+  "ai_template_1lpi": "/home/el/Documents/El-Projects/data-export/Illustrator Templates/Print Readings 1LPI.ai",
+  "excel_template": "/home/el/Documents/El-Projects/xrite-export/assets/template_extended.xlsx",
+  "libreoffice_path": "",
+  "dropdown_print_types": [
+    "CRS",
+    "QUA"
+  ],
+  "ai_template": "",
+  "xcm_title_col": "A",
+  "xcm_data_col_c": "B",
+  "xcm_gap_t1_to_t2": "4",
+  "ai_template_extended": "",
+  "xcm_title_t2_row_offset": "3",
+  "ai_template_3lpi": "/home/el/Documents/El-Projects/data-export/Illustrator Templates/Print Readings 3LPI.ai",
+  "ai_template_2lpi": "/home/el/Documents/El-Projects/data-export/Illustrator Templates/Print Readings 2LPI.ai",
+  "xcm_date_col": "I",
+  "xcm_data_col_m": "C"
+}

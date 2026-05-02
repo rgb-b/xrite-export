@@ -128,27 +128,23 @@ async fn browse_file(Query(params): Query<HashMap<String, String>>) -> Response 
     }
 }
 
-/// Expose only the companion-relevant settings keys.
 const COMPANION_KEYS: &[&str] = &["illustrator_path", "ai_template", "ai_template_extended"];
 
 async fn get_settings() -> Response {
     let s = settings::load();
-    let relevant: HashMap<String, serde_json::Value> = s
-        .into_iter()
-        .filter(|(k, _)| COMPANION_KEYS.contains(&k.as_str()))
-        .collect();
-    pna(
-        StatusCode::OK,
-        "application/json",
-        serde_json::to_vec(&relevant).unwrap_or_default(),
-    )
+    let body = serde_json::json!({
+        "illustrator_path":    s.illustrator_path,
+        "ai_template":         s.ai_template,
+        "ai_template_extended": s.ai_template_extended,
+    });
+    pna(StatusCode::OK, "application/json", serde_json::to_vec(&body).unwrap_or_default())
 }
 
 async fn patch_settings(Json(patch): Json<serde_json::Value>) -> Response {
     if let Some(obj) = patch.as_object() {
         for (key, value) in obj {
             if COMPANION_KEYS.contains(&key.as_str()) {
-                settings::set(key, value.clone());
+                settings::patch(key, value.clone());
             }
         }
     }

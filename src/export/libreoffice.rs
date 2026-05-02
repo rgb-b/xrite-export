@@ -50,7 +50,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
     }
     for shape in &job.shapes {
         if shape.weights.is_empty() {
-            bail!("Shape '{}' has no LPIs. Add at least one before exporting.", shape.name);
+            bail!("Shape '{}' has no LPIs. Add at least one before exporting.", shape.display_name());
         }
     }
 
@@ -68,7 +68,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
 
         for (chunk_idx, chunk) in chunks.iter().enumerate() {
             let safe_name: String = shape
-                .name
+                .display_name()
                 .chars()
                 .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' { c } else { '_' })
                 .collect();
@@ -96,7 +96,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
                 .with_context(|| {
                     format!(
                         "Failed to run UNO helper for shape '{}' chunk {}",
-                        shape.name,
+                        shape.display_name(),
                         chunk_idx + 1
                     )
                 })?;
@@ -105,7 +105,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
                 let stderr = String::from_utf8_lossy(&result.stderr);
                 bail!(
                     "LibreOffice export failed for shape '{}' chunk {}:\n{}",
-                    shape.name,
+                    shape.display_name(),
                     chunk_idx + 1,
                     stderr.trim()
                 );
@@ -114,7 +114,7 @@ pub fn export_pdf(job: &JobConfig, output_path: &Path) -> Result<()> {
             if !out_pdf.is_file() {
                 bail!(
                     "LibreOffice did not produce a PDF for shape '{}' chunk {}",
-                    shape.name,
+                    shape.display_name(),
                     chunk_idx + 1
                 );
             }

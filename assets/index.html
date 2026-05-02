@@ -8,24 +8,29 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f5f5f5;
+  --bg: #f1f5f9;
   --surface: #ffffff;
-  --border: #d0d0d0;
-  --border-dark: #aaaaaa;
-  --text: #1a1a1a;
-  --text-muted: #666;
+  --border: #d1d5db;
+  --border-dark: #9ca3af;
+  --text: #111827;
+  --text-muted: #6b7280;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
-  --tab-active: #2563eb;
+  --tab-active-bg: #2563eb;
   --tab-active-text: #fff;
-  --btn-bg: #e8e8e8;
-  --btn-hover: #d8d8d8;
+  --btn-bg: #e5e7eb;
+  --btn-hover: #d1d5db;
   --danger: #dc2626;
-  --readonly-bg: #f0f0f0;
+  --readonly-bg: #f3f4f6;
   --chip-bg: #dbeafe;
+  --chip-border: #93c5fd;
   --chip-text: #1e40af;
+  --toggle-active: #1e293b;
+  --dev-good-bg: #dcfce7; --dev-good-text: #166534;
+  --dev-ok-bg: #fef9c3;   --dev-ok-text: #713f12;
+  --dev-bad-bg: #fee2e2;  --dev-bad-text: #991b1b;
   --header-h: 44px;
-  --left-w: 230px;
+  --left-w: 234px;
   --font: system-ui, -apple-system, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', monospace;
 }
@@ -48,16 +53,17 @@ body {
   color: #e2e8f0;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 12px;
+  padding: 0 10px;
+  gap: 6px;
   flex-shrink: 0;
   box-shadow: 0 1px 4px rgba(0,0,0,.3);
 }
 .app-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: .3px;
-  margin-right: 8px;
+  margin-right: 4px;
+  white-space: nowrap;
 }
 .toolbar-sep { flex: 1; }
 .tbtn {
@@ -65,15 +71,40 @@ body {
   border: 1px solid rgba(255,255,255,.15);
   color: #e2e8f0;
   border-radius: 4px;
-  padding: 4px 10px;
+  padding: 4px 9px;
   font-size: 12px;
   cursor: pointer;
+  white-space: nowrap;
   transition: background .15s;
 }
 .tbtn:hover { background: rgba(255,255,255,.2); }
-.tbtn:disabled { opacity: .4; cursor: default; }
+.tbtn:disabled { opacity: .35; cursor: default; }
 .tbtn.primary { background: var(--accent); border-color: var(--accent); }
 .tbtn.primary:hover { background: var(--accent-hover); }
+
+/* Preset dropdown */
+.tb-dropdown { position: relative; }
+.tb-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  z-index: 50;
+  min-width: 180px;
+  overflow: hidden;
+}
+.tb-dropdown-menu[hidden] { display: none; }
+.tb-dropdown-item {
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.tb-dropdown-item:hover { background: #f1f5f9; }
 
 /* ── Main layout ─────────────────────────────────────────────────────────── */
 #main {
@@ -89,10 +120,10 @@ body {
   background: var(--surface);
   border-right: 1px solid var(--border);
   overflow-y: auto;
-  padding: 10px 10px 16px;
+  padding: 10px 10px 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .field-row {
@@ -101,14 +132,13 @@ body {
   gap: 2px;
 }
 .field-row label {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .4px;
 }
-.field-row input,
-.field-row select {
+.field-row input, .field-row select {
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 4px 6px;
@@ -118,57 +148,106 @@ body {
   color: var(--text);
   width: 100%;
 }
-.field-row input:focus,
-.field-row select:focus {
+.field-row input:focus, .field-row select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
 .field-row.inline { flex-direction: row; gap: 4px; }
-.field-row.inline input { flex: 1; min-width: 0; }
+.field-row.inline .field-row { flex: 1; }
 
 .section-label {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .4px;
   border-top: 1px solid var(--border);
-  padding-top: 8px;
-  margin-top: 2px;
+  padding-top: 7px;
+  margin-top: 1px;
 }
 
-/* Weight chips */
-#weight-chips {
+/* Toggle button groups (plate tech, press system, print type) */
+.toggle-group {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.tgl {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--btn-bg);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .1s, color .1s, border-color .1s;
+}
+.tgl:hover { background: var(--btn-hover); }
+.tgl.active {
+  background: var(--toggle-active);
+  color: #fff;
+  border-color: var(--toggle-active);
+}
+
+/* Heading preview */
+.heading-preview {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 3px 0;
+  min-height: 16px;
+  word-break: break-word;
+}
+
+/* Ink checkboxes */
+.ink-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.ink-cb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  user-select: none;
+}
+.ink-cb input[type=checkbox] { cursor: pointer; width: 13px; height: 13px; }
+
+/* Spot ink chips */
+.spot-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  margin-top: 2px;
 }
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   background: var(--chip-bg);
   color: var(--chip-text);
-  border: 1px solid #93c5fd;
-  border-radius: 12px;
-  padding: 2px 8px 2px 10px;
-  font-size: 12px;
+  border: 1px solid var(--chip-border);
+  border-radius: 10px;
+  padding: 1px 8px 1px 9px;
+  font-size: 11.5px;
   font-weight: 500;
 }
-.chip .chip-del {
+.chip-del {
   cursor: pointer;
   opacity: .5;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   padding: 0 1px;
 }
-.chip .chip-del:hover { opacity: 1; color: var(--danger); }
-.chip-add-row {
+.chip-del:hover { opacity: 1; color: var(--danger); }
+.add-spot-row {
   display: flex;
   gap: 4px;
   margin-top: 2px;
 }
-.chip-add-row input {
+.add-spot-row input {
   flex: 1;
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -176,7 +255,7 @@ body {
   font-size: 12px;
   min-width: 0;
 }
-.chip-add-row button {
+.add-spot-row button {
   background: var(--btn-bg);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -184,20 +263,7 @@ body {
   cursor: pointer;
   font-size: 12px;
 }
-.chip-add-row button:hover { background: var(--btn-hover); }
-
-/* Step preset */
-.preset-row {
-  display: flex;
-  gap: 6px;
-}
-.preset-row label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
+.add-spot-row button:hover { background: var(--btn-hover); }
 
 /* ── Center ───────────────────────────────────────────────────────────────── */
 #center {
@@ -217,14 +283,13 @@ body {
   background: var(--surface);
   border-bottom: 2px solid var(--border);
   flex-shrink: 0;
-  flex-wrap: nowrap;
   overflow-x: auto;
 }
 .tab {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 12px;
+  padding: 5px 11px;
   border: 1px solid var(--border);
   border-bottom: none;
   border-radius: 4px 4px 0 0;
@@ -235,23 +300,24 @@ body {
   position: relative;
   bottom: -2px;
   transition: background .1s;
+  user-select: none;
 }
 .tab:hover { background: var(--btn-hover); }
 .tab.active {
-  background: var(--tab-active);
+  background: var(--tab-active-bg);
   color: var(--tab-active-text);
-  border-color: var(--tab-active);
+  border-color: var(--tab-active-bg);
   font-weight: 600;
 }
 .tab .tab-del {
   font-size: 13px;
-  opacity: .5;
+  opacity: .45;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 0 1px;
   line-height: 1;
 }
 .tab .tab-del:hover { opacity: 1; }
-.tab.active .tab-del { opacity: .7; }
+.tab.active .tab-del { opacity: .65; }
 .tab.active .tab-del:hover { opacity: 1; }
 .tab-add {
   padding: 5px 10px;
@@ -260,7 +326,7 @@ body {
   border-radius: 4px 4px 0 0;
   background: transparent;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1;
   color: var(--text-muted);
   position: relative;
@@ -268,21 +334,70 @@ body {
 }
 .tab-add:hover { color: var(--accent); border-color: var(--accent); }
 
-/* Weight tab bar (inner) */
-#weight-tab-bar {
+/* LPI (weight) tab bar */
+#lpi-tab-bar {
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   padding: 4px 10px 0;
 }
-#weight-tab-bar .tab {
-  background: #e8ecf0;
+#lpi-tab-bar .tab {
+  background: #dde3ea;
   font-size: 11px;
   padding: 4px 10px;
 }
-#weight-tab-bar .tab.active {
+#lpi-tab-bar .tab.active {
   background: #475569;
   border-color: #475569;
 }
+
+/* Inline tab editor */
+.tab-edit-input {
+  font: inherit;
+  background: transparent;
+  border: none;
+  outline: 1px solid currentColor;
+  padding: 0 2px;
+  color: inherit;
+  width: 5em;
+}
+
+/* Inline add form (appears in tab bar when + is clicked) */
+.tab-add-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  position: relative;
+  bottom: -2px;
+}
+.tab-add-form input {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--surface);
+}
+.tab-add-form input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.tab-add-form button {
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  font-size: 12px;
+  cursor: pointer;
+}
+.tab-add-form button:hover { background: var(--btn-hover); }
+.tab-add-form .confirm-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.tab-add-form .confirm-btn:hover { background: var(--accent-hover); }
 
 /* ── Grid area ───────────────────────────────────────────────────────────── */
 #grid-area {
@@ -325,7 +440,7 @@ body {
 .density-grid th {
   background: #1e293b;
   color: #e2e8f0;
-  padding: 6px 14px;
+  padding: 6px 12px;
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -353,12 +468,24 @@ body {
   font-weight: 600;
   color: var(--text);
 }
-.density-grid tr.readonly-row td.row-label {
-  color: #999;
-}
 .density-grid tr:hover td { background: #f7f9ff; }
 .density-grid tr:hover td.row-label { background: #eef2f8; }
 .density-grid tr.readonly-row:hover td { background: var(--readonly-bg); }
+.density-grid td.avg-cell, .density-grid td.dev-cell, .density-grid td.target-cell {
+  padding: 1px 6px;
+  font-size: 11px;
+  text-align: right;
+  color: var(--text-muted);
+  min-width: 44px;
+}
+.density-grid td.target-cell {
+  background: #f0f4ff;
+  color: #4b5563;
+  font-style: italic;
+}
+.density-grid td.dev-good { background: var(--dev-good-bg); color: var(--dev-good-text); }
+.density-grid td.dev-ok   { background: var(--dev-ok-bg);   color: var(--dev-ok-text);   }
+.density-grid td.dev-bad  { background: var(--dev-bad-bg);  color: var(--dev-bad-text);  }
 
 .cell-input {
   width: 72px;
@@ -400,7 +527,7 @@ body {
   background: var(--surface);
   border-radius: 6px;
   box-shadow: 0 8px 32px rgba(0,0,0,.25);
-  width: 520px;
+  width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -433,7 +560,7 @@ body {
   gap: 10px;
 }
 .settings-section-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -443,15 +570,9 @@ body {
   margin-top: 4px;
 }
 .settings-section-title:first-child {
-  border-top: none;
-  padding-top: 0;
-  margin-top: 0;
+  border-top: none; padding-top: 0; margin-top: 0;
 }
-.settings-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
+.settings-row { display: flex; flex-direction: column; gap: 3px; }
 .settings-row label { font-size: 12px; font-weight: 500; }
 .settings-row input {
   border: 1px solid var(--border);
@@ -466,10 +587,7 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
-.settings-row .hint {
-  font-size: 11px;
-  color: var(--text-muted);
-}
+.settings-row .hint { font-size: 11px; color: var(--text-muted); }
 .locate-btn {
   flex-shrink: 0;
   padding: 2px 8px;
@@ -477,18 +595,19 @@ body {
   border-radius: 3px;
   cursor: pointer;
   white-space: nowrap;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
 }
-.locate-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+.locate-btn:disabled { opacity: .4; cursor: not-allowed; }
 #modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
 }
+#modal-footer a { font-size: 12px; color: var(--accent); text-decoration: none; margin-right: auto; }
 #modal-footer button {
   padding: 5px 14px;
   border-radius: 4px;
@@ -499,13 +618,11 @@ body {
 }
 #modal-footer button:hover { background: var(--btn-hover); }
 #modal-footer button.primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: var(--accent); color: #fff; border-color: var(--accent);
 }
 #modal-footer button.primary:hover { background: var(--accent-hover); }
 
-/* Status toast */
+/* Toast */
 #toast {
   position: fixed;
   bottom: 16px;
@@ -522,6 +639,14 @@ body {
 }
 #toast[hidden] { opacity: 0; }
 #toast.error { background: #7f1d1d; }
+
+/* Build footer */
+#build-footer {
+  position: fixed; bottom: 0; right: 0;
+  padding: 2px 8px; font-size: 10px;
+  color: #9ca3af;
+  pointer-events: none;
+}
 </style>
 </head>
 <body>
@@ -529,14 +654,31 @@ body {
 <!-- Toolbar -->
 <header id="toolbar">
   <span class="app-title">Ink Density Tool</span>
+
+  <!-- Preset dropdown -->
+  <div class="tb-dropdown" id="preset-dropdown">
+    <button class="tbtn" id="preset-btn" onclick="togglePresetMenu()">Steps &#9660;</button>
+    <div class="tb-dropdown-menu" id="preset-menu" hidden></div>
+  </div>
+
+  <button class="tbtn" onclick="newJob()">New Job</button>
+  <button class="tbtn" onclick="fillSampleData()" title="Fill active LPI with realistic test data">Sample Data</button>
+  <button class="tbtn" onclick="clearCurrentWeight()" title="Zero out active LPI data">Clear</button>
+
   <div class="toolbar-sep"></div>
-  <button class="tbtn" onclick="saveSession()">&#128190; Save Session</button>
-  <button class="tbtn" onclick="document.getElementById('session-file').click()">&#128194; Load Session</button>
+
+  <button class="tbtn" onclick="saveSession()">&#x1F4BE; Save</button>
+  <button class="tbtn" onclick="document.getElementById('session-file').click()">&#x1F4C2; Load</button>
   <input id="session-file" type="file" accept=".json" hidden onchange="loadSessionFile(event)">
-  <button class="tbtn primary" onclick="exportExcel()">&#128202; Export Excel</button>
-  <button class="tbtn" onclick="exportSVG()">&#9698; Export SVG</button>
-  <button class="tbtn" id="pdf-btn" onclick="exportPDF()">&#128196; Export PDF</button>
-  <button class="tbtn" onclick="openSettings()">&#9881; Settings</button>
+
+  <div class="toolbar-sep"></div>
+
+  <button class="tbtn primary" onclick="exportExcel()">&#x1F4CA; Excel</button>
+  <button class="tbtn" onclick="printReport()">&#x1F5A8; Report</button>
+  <button class="tbtn" onclick="exportSVG()">&#x25F1; SVG</button>
+  <button class="tbtn" id="pdf-btn" onclick="exportPDF()" disabled title="Start companion to enable PDF export">&#x1F4C4; PDF</button>
+
+  <button class="tbtn" onclick="openSettings()" title="Settings">&#x2699;</button>
 </header>
 
 <!-- Main -->
@@ -544,69 +686,103 @@ body {
 
   <!-- Left panel -->
   <aside id="left-panel">
-    <div class="field-row">
+
+    <div id="fr-customer" class="field-row">
       <label>Customer</label>
-      <input id="f-customer" type="text" oninput="job.customer=this.value">
+      <input id="f-customer" type="text" oninput="job.customer=this.value;updateHeading()">
     </div>
-    <div class="field-row">
+
+    <div id="fr-job-name" class="field-row">
+      <label>Job Name</label>
+      <input id="f-job-name" type="text" oninput="job.job_name=this.value">
+    </div>
+
+    <div id="fr-job-number" class="field-row">
+      <label>Job #</label>
+      <input id="f-job-number" type="text" oninput="job.job_number=this.value">
+    </div>
+
+    <div id="fr-plate-press" class="field-row">
+      <label>Plate / Press</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <div class="toggle-group" id="plate-tech-group">
+          <button class="tgl" data-val="CRS" onclick="setPlateTech('CRS')">CRS</button>
+          <button class="tgl" data-val="QUA" onclick="setPlateTech('QUA')">QUA</button>
+          <button class="tgl" data-val=""    onclick="setPlateTech('')">—</button>
+        </div>
+        <div class="toggle-group" id="press-sys-group">
+          <button class="tgl" data-val="XPS" onclick="setPressSystem('XPS')">XPS</button>
+          <button class="tgl" data-val="ITP" onclick="setPressSystem('ITP')">ITP</button>
+          <button class="tgl" data-val=""    onclick="setPressSystem('')">—</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="fr-esxr" class="field-row" style="display:none">
+      <label>ESXR #</label>
+      <input id="f-esxr" type="text" oninput="job.esxr_number=this.value;updateHeading()">
+    </div>
+
+    <div id="fr-print-type" class="field-row">
       <label>Print Type</label>
-      <select id="f-print-type" onchange="job.print_type=this.value"></select>
-    </div>
-    <div class="field-row">
-      <label>Stock Desc</label>
-      <input id="f-stock-desc" type="text" oninput="job.stock_desc=this.value">
-    </div>
-    <div class="field-row">
-      <label>Finish</label>
-      <select id="f-finish" onchange="job.finish=this.value"></select>
-    </div>
-    <div class="field-row inline">
-      <div class="field-row" style="flex:1">
-        <label>Dot Shape</label>
-        <select id="f-dot-shape-type" onchange="job.dot_shape_type=this.value"></select>
-      </div>
-      <div class="field-row" style="width:60px">
-        <label>No.</label>
-        <input id="f-dot-shape-num" type="text" oninput="job.dot_shape_number=this.value">
+      <div class="toggle-group" id="print-type-group">
+        <button class="tgl" data-val="RP"     onclick="setPrintType('RP')">RP</button>
+        <button class="tgl" data-val="SP"     onclick="setPrintType('SP')">SP</button>
+        <button class="tgl" data-val="CBW SP" onclick="setPrintType('CBW SP')">CBW SP</button>
+        <button class="tgl" data-val=""       onclick="setPrintType('')">—</button>
       </div>
     </div>
-    <div class="field-row">
-      <label>Date</label>
-      <input id="f-date" type="text" placeholder="dd/mm/yyyy" oninput="job.date=this.value">
-    </div>
+
     <div class="field-row inline">
-      <div class="field-row" style="flex:1">
+      <div id="fr-date" class="field-row">
+        <label>Date</label>
+        <input id="f-date" type="text" placeholder="dd/mm/yy" oninput="job.date=this.value">
+      </div>
+      <div id="fr-set-number" class="field-row">
         <label>Set #</label>
-        <input id="f-set-num" type="text" oninput="job.set_number=this.value">
-      </div>
-      <div class="field-row" style="flex:1">
-        <label>Job #</label>
-        <input id="f-job-num" type="text" oninput="job.job_number=this.value">
+        <input id="f-set-number" type="text" oninput="job.set_number=this.value">
       </div>
     </div>
 
-    <div class="section-label">LPI Labels</div>
-    <div id="weight-chips"></div>
-    <div class="chip-add-row">
-      <input id="new-chip-input" type="text" placeholder="e.g. 175#" maxlength="10"
-             onkeydown="if(event.key==='Enter')addWeightLabel()">
-      <button onclick="addWeightLabel()">+</button>
+    <!-- Auto-heading preview -->
+    <div id="heading-preview" class="heading-preview"></div>
+
+    <!-- Inks -->
+    <div id="fr-inks" class="section-label">Inks</div>
+    <div class="ink-checkboxes" id="ink-checkboxes">
+      <label class="ink-cb"><input type="checkbox" id="ck-cyan"    onchange="toggleStdInk('cyan','C',this.checked)">C</label>
+      <label class="ink-cb"><input type="checkbox" id="ck-magenta" onchange="toggleStdInk('magenta','M',this.checked)">M</label>
+      <label class="ink-cb"><input type="checkbox" id="ck-yellow"  onchange="toggleStdInk('yellow','Y',this.checked)">Y</label>
+      <label class="ink-cb"><input type="checkbox" id="ck-black"   onchange="toggleStdInk('black','K',this.checked)">K</label>
+      <label class="ink-cb"><input type="checkbox" id="ck-white"   onchange="toggleStdInk('white','W',this.checked)">W</label>
+    </div>
+    <div class="spot-chips" id="spot-chips"></div>
+    <div class="add-spot-row">
+      <input id="new-spot-input" type="text" placeholder="e.g. PMS 485" maxlength="20"
+             onkeydown="if(event.key==='Enter')addSpotInk()">
+      <button onclick="addSpotInk()">+ Spot</button>
     </div>
 
-    <div class="section-label">Step Preset</div>
-    <div class="preset-row">
-      <label><input type="radio" name="preset" value="14" onchange="applyStepPreset(14)"> Std 14</label>
-      <label><input type="radio" name="preset" value="16" onchange="applyStepPreset(16)"> Ext 16</label>
+    <!-- Steps -->
+    <div id="fr-steps" class="section-label">Steps</div>
+    <div class="field-row">
+      <label>Step Preset</label>
+      <select id="step-preset-sel" onchange="applyStepPresetByName(this.value)"></select>
     </div>
+
   </aside>
 
   <!-- Center -->
   <div id="center">
     <div class="tab-bar" id="shape-tab-bar"></div>
-    <div class="tab-bar" id="weight-tab-bar" style="padding-top:4px;font-size:11px;"></div>
+    <div class="tab-bar" id="lpi-tab-bar"></div>
     <div id="grid-area"></div>
   </div>
 </div>
+
+<!-- Datalists for shape/LPI pickers (populated by JS) -->
+<datalist id="dot-types-list"></datalist>
+<datalist id="lpi-values-list"></datalist>
 
 <!-- Settings modal -->
 <div id="modal-overlay" hidden>
@@ -616,422 +792,732 @@ body {
       <button onclick="closeSettings()" title="Close">&#x2715;</button>
     </div>
     <div id="modal-body">
-      <div class="settings-section-title">Server — Excel Export</div>
-      <div class="settings-row">
-        <label>Excel Template Path (server filesystem)</label>
-        <input id="s-excel-template" type="text" placeholder="/home/user/templates/template_standard.xlsx">
-        <span class="hint">Path to the .xlsx template on the Linux server.</span>
+      <div class="settings-section-title">Step Presets</div>
+      <div id="step-presets-list"></div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;gap:6px;">
+          <input id="new-preset-name" type="text" placeholder="Name" style="width:110px;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;">
+          <input id="new-preset-steps" type="text" placeholder="100,75,50,25,10,2" style="flex:1;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;font-family:var(--mono);">
+        </div>
+        <button onclick="addStepPreset()" style="align-self:flex-start;padding:4px 10px;font-size:12px;border:1px solid var(--border);border-radius:3px;background:var(--btn-bg);cursor:pointer;">+ Add Preset</button>
       </div>
 
       <div class="settings-section-title">Companion — Illustrator / PDF</div>
       <div class="settings-row">
         <label>Illustrator.exe Path</label>
         <input id="s-illustrator-path" type="text" placeholder="C:\Program Files\Adobe\...">
-        <span class="hint">Set on companion PC. Saved to companion's local settings.</span>
+        <span class="hint">Set on Windows companion PC.</span>
       </div>
       <div class="settings-row">
         <label>AI Template (Standard 14-step)</label>
         <div style="display:flex;gap:4px;align-items:center;">
-          <input id="s-ai-template" type="text" placeholder="C:\templates\template.ai" style="flex:1;">
-          <button id="locate-ai-template" class="locate-btn" onclick="locateFile('s-ai-template','ai')" title="Browse on companion PC">Locate…</button>
+          <input id="s-ai-template" type="text" placeholder="C:\templates\template.ai" style="flex:1">
+          <button id="locate-ai-template" class="locate-btn" onclick="locateFile('s-ai-template','ai')">Locate&#8230;</button>
         </div>
       </div>
       <div class="settings-row">
         <label>AI Template (Extended 16-step)</label>
         <div style="display:flex;gap:4px;align-items:center;">
-          <input id="s-ai-template-ext" type="text" placeholder="C:\templates\template_extended.ai" style="flex:1;">
-          <button id="locate-ai-template-ext" class="locate-btn" onclick="locateFile('s-ai-template-ext','ai')" title="Browse on companion PC">Locate…</button>
+          <input id="s-ai-template-ext" type="text" placeholder="C:\templates\template_extended.ai" style="flex:1">
+          <button id="locate-ai-template-ext" class="locate-btn" onclick="locateFile('s-ai-template-ext','ai')">Locate&#8230;</button>
         </div>
       </div>
-
-      <div class="settings-section-title">Excel Cell Mapping</div>
-      <div id="xcm-fields"></div>
     </div>
     <div id="modal-footer">
-      <a href="/api/export/builder-script" download style="font-size:12px;color:var(--accent);text-decoration:none;align-self:center;margin-right:auto;">&#8595; Builder Script</a>
+      <a href="/api/export/builder-script" download>&#8595; Builder Script</a>
       <button onclick="closeSettings()">Cancel</button>
       <button class="primary" onclick="saveSettings()">Save Settings</button>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
+<!-- Toast + build footer -->
 <div id="toast" hidden></div>
-
-<!-- Build version footer -->
-<div id="build-footer" style="position:fixed;bottom:0;right:0;padding:2px 8px;font-size:10px;color:#999;background:rgba(0,0,0,0.03);pointer-events:none;"></div>
+<div id="build-footer"></div>
 
 <script>
 'use strict';
 
-// ── State ──────────────────────────────────────────────────────────────────
-let job = null;
-let settings = {};
-let activeShapeIdx = 0;
-let activeWeightIdx = [];   // per shape
-let companionAvailable = false;
-let settleTimer = null;
-
-const STEP_LABELS_14 = ["100","95","90","80","70","60","50","40","30","20","10","5","3","1"];
-const STEP_LABELS_16 = ["100","95","90","80","70","60","50","40","30","20","10","5","3","1","0.8","0.4"];
-
-const DROPDOWN_KEYS = {
-  'f-print-type':     'dropdown_print_types',
-  'f-finish':         'dropdown_finishes',
-  'f-dot-shape-type': 'dropdown_dot_shape_types',
-};
-
-const XCM_FIELDS = [
-  { key: 'xcm_title_col',           label: 'Title Column',             dflt: 'A' },
-  { key: 'xcm_date_col',            label: 'Date Column',              dflt: 'I' },
-  { key: 'xcm_step_start_row',      label: 'Step Start Row',           dflt: '4' },
-  { key: 'xcm_data_col_c',          label: 'Data Column C',            dflt: 'B' },
-  { key: 'xcm_data_col_m',          label: 'Data Column M',            dflt: 'C' },
-  { key: 'xcm_data_col_y',          label: 'Data Column Y',            dflt: 'D' },
-  { key: 'xcm_data_col_k',          label: 'Data Column K',            dflt: 'E' },
-  { key: 'xcm_label_col',           label: 'Label Column',             dflt: 'A' },
-  { key: 'xcm_dot_shape_col',       label: 'Dot Shape Column',         dflt: 'I' },
-  { key: 'xcm_gap_t1_to_t2',        label: 'Gap T1→T2 (rows)',         dflt: '4' },
-  { key: 'xcm_density_row_offset',  label: 'Density Row Offset',       dflt: '1' },
-  { key: 'xcm_title_t2_row_offset', label: 'Title T2 Row Offset',      dflt: '3' },
+// ── Dot gain targets + interpolation ─────────────────────────────────────
+const DOT_GAIN_TARGETS = [
+  [0.4,1],[0.8,2],[1,3],[3,9],[5,13],[10,22],
+  [20,37],[30,51],[40,62],[50,72],[60,81],
+  [70,88],[80,93],[90,97],[95,99],[100,100]
 ];
 
-// ── Init ───────────────────────────────────────────────────────────────────
-async function init() {
-  buildXcmFields();
-  await Promise.all([fetchJob(), fetchSettings()]);
-  populateMetadata();
-  populateDropdowns();
-  renderWeightChips();
-  renderStepPreset();
-  renderShapeTabs();
-  probeCompanion();
-  fetchBuildVersion();
-}
-
-async function fetchBuildVersion() {
-  try {
-    const r = await fetch('/api/version');
-    const { build_ts } = await r.json();
-    const d = new Date(Number(build_ts) * 1000);
-    const fmt = d.toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
-    document.getElementById('build-footer').textContent = `built ${fmt}`;
-  } catch {}
-}
-
-async function fetchJob() {
-  try {
-    const r = await fetch('/api/job');
-    job = await r.json();
-    activeWeightIdx = job.shapes.map(() => 0);
-    if (activeShapeIdx >= job.shapes.length) activeShapeIdx = 0;
-  } catch (e) {
-    job = makeDefaultJob();
-    activeWeightIdx = [];
-    showToast('Could not load job from server', true);
+function interpolateTarget(stepStr) {
+  const s = parseFloat(stepStr);
+  if (isNaN(s)) return null;
+  const first = DOT_GAIN_TARGETS[0][0];
+  const last  = DOT_GAIN_TARGETS[DOT_GAIN_TARGETS.length - 1][0];
+  if (s < first || s > last) return null;
+  for (const [s0, t0] of DOT_GAIN_TARGETS) {
+    if (Math.abs(s0 - s) < 1e-9) return t0;
   }
-}
-
-async function fetchSettings() {
-  try {
-    const r = await fetch('/api/settings');
-    settings = await r.json();
-  } catch (e) {
-    settings = {};
+  for (let i = 0; i < DOT_GAIN_TARGETS.length - 1; i++) {
+    const [s0, t0] = DOT_GAIN_TARGETS[i];
+    const [s1, t1] = DOT_GAIN_TARGETS[i + 1];
+    if (s >= s0 && s <= s1) {
+      return t0 + (s - s0) / (s1 - s0) * (t1 - t0);
+    }
   }
+  return null;
 }
 
-async function pushJob() {
-  try {
-    await fetch('/api/job', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job),
-    });
-  } catch (e) { /* non-fatal */ }
+// ── State ─────────────────────────────────────────────────────────────────
+let job = null;
+let settings = { job_presets: [], step_presets: [], dot_types: [], lpi_values: [] };
+let activeShapeIdx = 0;
+let activeLpiIdx = [];
+let companionAvailable = false;
+let addingShape = false;
+let addingLpi = false;
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function inkKey(ink) {
+  return ink.kind === 'spot' ? `spot:${ink.name}` : ink.kind;
+}
+
+function getDeviationInkIndices() {
+  const devKinds = ['cyan','magenta','yellow','black'];
+  return job.inks
+    .map((ink, i) => ({ ink, i }))
+    .filter(({ ink }) => devKinds.includes(ink.kind))
+    .map(({ i }) => i);
+}
+
+// ── Job + weight factories ────────────────────────────────────────────────
 function makeDefaultJob() {
   return {
-    customer: '', print_type: 'CRS', stock_desc: '', finish: 'RP',
-    dot_shape_type: 'CRS', dot_shape_number: '',
-    date: '', set_number: '', job_number: '',
-    weight_labels: ['120#', '150#', '200#'],
-    step_labels: [...STEP_LABELS_14],
-    colour_names: ['C', 'M', 'Y', 'K'],
+    preset_name: '',
+    job_name: '', job_number: '', customer: '',
+    plate_tech: '', press_system: '', esxr_number: '',
+    print_type: '', date: '', set_number: '',
+    inks: [
+      {kind:'cyan',    name:'C'},
+      {kind:'magenta', name:'M'},
+      {kind:'yellow',  name:'Y'},
+      {kind:'black',   name:'K'},
+    ],
+    step_labels: ["100","95","90","80","70","60","50","40","30","20","10","5","3","1"],
     shapes: [],
   };
 }
 
-// ── Metadata ───────────────────────────────────────────────────────────────
-function populateMetadata() {
-  setField('f-customer',    job.customer);
-  setField('f-stock-desc',  job.stock_desc);
-  setField('f-dot-shape-num', job.dot_shape_number);
-  setField('f-date',        job.date);
-  setField('f-set-num',     job.set_number);
-  setField('f-job-num',     job.job_number);
+function makeWeight(lpi) {
+  const ni = job.inks.length;
+  const ns = job.step_labels.length;
+  return {
+    lpi: lpi || '',
+    density: Array(ni).fill(0),
+    steps: Array.from({length: ns}, () => Array(ni).fill(0)),
+  };
 }
 
-function setField(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.value = val || '';
+function makeShape() {
+  return { dot_type: '', dot_number: '', weights: [] };
 }
 
-function populateDropdowns() {
-  for (const [id, key] of Object.entries(DROPDOWN_KEYS)) {
-    const sel = document.getElementById(id);
-    if (!sel) continue;
-    const opts = (settings[key] && Array.isArray(settings[key])) ? settings[key] : [];
-    sel.innerHTML = '';
-    for (const opt of opts) {
-      const o = document.createElement('option');
-      o.value = o.textContent = opt;
-      sel.appendChild(o);
-    }
-    // Ensure current job value is present
-    const jobVal = job[id.replace('f-', '').replace(/-([a-z])/g, (_,c) => '_'+c)];
-    if (jobVal && !opts.includes(jobVal)) {
-      const o = document.createElement('option');
-      o.value = o.textContent = jobVal;
-      sel.insertBefore(o, sel.firstChild);
-    }
-    sel.value = jobVal || (opts[0] || '');
-  }
+function shapeDisplayName(shape) {
+  if (!shape.dot_number) return shape.dot_type || 'Shape';
+  return `${shape.dot_type} ${shape.dot_number}`;
 }
 
-// ── Weight chips ───────────────────────────────────────────────────────────
-function renderWeightChips() {
-  const container = document.getElementById('weight-chips');
-  container.innerHTML = '';
-  for (let i = 0; i < job.weight_labels.length; i++) {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.innerHTML = `${escHtml(job.weight_labels[i])}<span class="chip-del" onclick="removeWeightLabel(${i})" title="Remove">&#x2715;</span>`;
-    container.appendChild(chip);
-  }
+// ── Datalist management ───────────────────────────────────────────────────
+function updateDotTypeDatalist() {
+  const dl = document.getElementById('dot-types-list');
+  if (!dl) return;
+  dl.innerHTML = (settings.dot_types || []).map(t => `<option value="${esc(t)}">`).join('');
 }
 
-function syncWeightLabels() {
+function updateLpiDatalist() {
+  const dl = document.getElementById('lpi-values-list');
+  if (!dl) return;
+  dl.innerHTML = (settings.lpi_values || []).map(v => `<option value="${esc(v)}">`).join('');
+}
+
+async function saveNewDotType(type) {
+  if (!type || (settings.dot_types || []).includes(type)) return;
+  if (!settings.dot_types) settings.dot_types = [];
+  settings.dot_types.push(type);
+  updateDotTypeDatalist();
+  try {
+    await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)});
+  } catch {}
+}
+
+async function saveNewLpiValue(lpi) {
+  if (!lpi || (settings.lpi_values || []).includes(lpi)) return;
+  if (!settings.lpi_values) settings.lpi_values = [];
+  settings.lpi_values.push(lpi);
+  updateLpiDatalist();
+  try {
+    await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)});
+  } catch {}
+}
+
+// ── Ink management ────────────────────────────────────────────────────────
+function setInks(newInks) {
+  const oldInkMap = new Map(job.inks.map((ink, i) => [inkKey(ink), i]));
   for (const shape of job.shapes) {
-    for (let i = 0; i < shape.weights.length; i++) {
-      if (i < job.weight_labels.length) {
-        shape.weights[i].label = job.weight_labels[i];
-      }
+    for (const weight of shape.weights) {
+      const oldD = weight.density;
+      weight.density = newInks.map(ink => {
+        const oi = oldInkMap.get(inkKey(ink));
+        return oi !== undefined ? (oldD[oi] || 0) : 0;
+      });
+      weight.steps = weight.steps.map(row => newInks.map(ink => {
+        const oi = oldInkMap.get(inkKey(ink));
+        return oi !== undefined ? (row[oi] || 0) : 0;
+      }));
     }
   }
+  job.inks = newInks;
 }
 
-function addWeightLabel() {
-  const input = document.getElementById('new-chip-input');
-  const val = input.value.trim();
-  if (!val) return;
-  if (!job.weight_labels.includes(val)) {
-    job.weight_labels.push(val);
-    syncWeightLabels();
-    renderWeightChips();
-    pushJob();
-  }
-  input.value = '';
-}
-
-function removeWeightLabel(i) {
-  job.weight_labels.splice(i, 1);
-  syncWeightLabels();
-  renderWeightChips();
-  pushJob();
-}
-
-// ── Step preset ────────────────────────────────────────────────────────────
-function renderStepPreset() {
-  const n = job.step_labels.length;
-  const radios = document.querySelectorAll('input[name="preset"]');
-  for (const r of radios) {
-    r.checked = parseInt(r.value) === n;
-  }
-}
-
-function applyStepPreset(n) {
-  const labels = n === 16 ? [...STEP_LABELS_16] : [...STEP_LABELS_14];
-  job.step_labels = labels;
-  // Resize all weight step arrays
-  for (const shape of job.shapes) {
-    for (const w of shape.weights) {
-      while (w.steps.length < n) w.steps.push([0,0,0,0]);
-      w.steps.length = n;
+function toggleStdInk(kind, name, checked) {
+  const order = ['cyan','magenta','yellow','black','white'];
+  const stdNames = {cyan:'C', magenta:'M', yellow:'Y', black:'K', white:'W'};
+  const result = [];
+  for (const k of order) {
+    const ck = document.getElementById(`ck-${k}`);
+    if (k === kind ? checked : (ck && ck.checked)) {
+      result.push({kind: k, name: stdNames[k]});
     }
   }
+  for (const ink of job.inks) {
+    if (ink.kind === 'spot') result.push(ink);
+  }
+  setInks(result);
   renderGrid();
   pushJob();
 }
 
-// ── Shape tabs ─────────────────────────────────────────────────────────────
-function startRenameShape(i, nameSpan, tab) {
-  if (activeShapeIdx !== i) { activeShapeIdx = i; renderShapeTabs(); return; }
-  const input = document.createElement('input');
-  input.value = job.shapes[i].name;
-  input.style.cssText = 'font:inherit;background:transparent;border:none;outline:1px solid currentColor;width:6em;padding:0 2px;color:inherit;';
-  nameSpan.replaceWith(input);
-  input.focus();
-  input.select();
-  let committed = false;
-  function commit() {
-    if (committed) return;
-    committed = true;
-    const v = input.value.trim();
-    if (v) job.shapes[i].name = v;
-    pushJob();
-    renderShapeTabs();
+function addSpotInk() {
+  const input = document.getElementById('new-spot-input');
+  const name = input.value.trim();
+  if (!name) return;
+  if (job.inks.some(i => i.kind === 'spot' && i.name === name)) {
+    showToast(`"${name}" already added`, true);
+    return;
   }
-  input.addEventListener('blur', commit);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    if (e.key === 'Escape') { committed = true; renderShapeTabs(); }
-  });
+  const newInks = [...job.inks, {kind: 'spot', name}];
+  setInks(newInks);
+  renderSpotChips();
+  renderGrid();
+  pushJob();
+  input.value = '';
 }
 
+function removeSpotInk(name) {
+  setInks(job.inks.filter(i => !(i.kind === 'spot' && i.name === name)));
+  renderSpotChips();
+  renderGrid();
+  pushJob();
+}
+
+function renderInkCheckboxes() {
+  const kinds = {cyan:'ck-cyan', magenta:'ck-magenta', yellow:'ck-yellow', black:'ck-black', white:'ck-white'};
+  for (const [kind, id] of Object.entries(kinds)) {
+    const ck = document.getElementById(id);
+    if (ck) ck.checked = job.inks.some(i => i.kind === kind);
+  }
+  renderSpotChips();
+}
+
+function renderSpotChips() {
+  const container = document.getElementById('spot-chips');
+  container.innerHTML = '';
+  for (const ink of job.inks) {
+    if (ink.kind !== 'spot') continue;
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${esc(ink.name)}<span class="chip-del" title="Remove" onclick="removeSpotInk(${JSON.stringify(ink.name)})">&#x2715;</span>`;
+    container.appendChild(chip);
+  }
+}
+
+// ── Metadata ──────────────────────────────────────────────────────────────
+function populateMetadata() {
+  setV('f-customer',   job.customer);
+  setV('f-job-name',   job.job_name);
+  setV('f-job-number', job.job_number);
+  setV('f-esxr',       job.esxr_number);
+  setV('f-date',       job.date);
+  setV('f-set-number', job.set_number);
+  syncToggle('plate-tech-group',  job.plate_tech);
+  syncToggle('press-sys-group',   job.press_system);
+  syncToggle('print-type-group',  job.print_type);
+  updateHeading();
+}
+
+function setV(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val || '';
+}
+
+function syncToggle(groupId, val) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  for (const btn of group.querySelectorAll('.tgl')) {
+    btn.classList.toggle('active', btn.dataset.val === val);
+  }
+}
+
+function setPlateTech(val) {
+  job.plate_tech = val; syncToggle('plate-tech-group', val); updateHeading(); pushJob();
+}
+function setPressSystem(val) {
+  job.press_system = val; syncToggle('press-sys-group', val); updateHeading(); pushJob();
+}
+function setPrintType(val) {
+  job.print_type = val; syncToggle('print-type-group', val); updateHeading(); pushJob();
+}
+
+function updateHeading() {
+  const specParts = [job.plate_tech, job.press_system, job.esxr_number].filter(Boolean);
+  const parts = [job.customer, specParts.join(' '), job.print_type].filter(Boolean);
+  const el = document.getElementById('heading-preview');
+  if (el) el.textContent = parts.join(' — ') || '—';
+}
+
+// ── Step presets ──────────────────────────────────────────────────────────
+function buildPresetMenu() {
+  const menu = document.getElementById('preset-menu');
+  menu.innerHTML = '';
+  const presets = settings.step_presets || [];
+  if (!presets.length) {
+    const item = document.createElement('div');
+    item.className = 'tb-dropdown-item';
+    item.style.cssText = 'color:var(--text-muted);font-style:italic;';
+    item.textContent = 'No step presets — add in Settings';
+    menu.appendChild(item);
+    return;
+  }
+  for (const preset of presets) {
+    const item = document.createElement('div');
+    item.className = 'tb-dropdown-item';
+    item.textContent = preset.name;
+    item.onclick = () => {
+      applyStepPreset(preset.steps);
+      togglePresetMenu(false);
+      showToast(`Step preset: ${preset.name}`);
+    };
+    menu.appendChild(item);
+  }
+}
+
+function togglePresetMenu(force) {
+  const menu = document.getElementById('preset-menu');
+  menu.hidden = force !== undefined ? !force : !menu.hidden;
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('preset-dropdown').contains(e.target)) {
+    document.getElementById('preset-menu').hidden = true;
+  }
+});
+
+function buildStepPresetDropdown() {
+  const sel = document.getElementById('step-preset-sel');
+  sel.innerHTML = '<option value="">Custom</option>';
+  for (const p of settings.step_presets || []) {
+    const o = document.createElement('option');
+    o.value = p.name;
+    o.textContent = p.name;
+    sel.appendChild(o);
+  }
+  // Match current step_labels to a preset
+  const current = JSON.stringify(job.step_labels);
+  for (const p of settings.step_presets || []) {
+    if (JSON.stringify(p.steps) === current) { sel.value = p.name; return; }
+  }
+  sel.value = '';
+}
+
+function applyStepPresetByName(name) {
+  const sp = (settings.step_presets || []).find(p => p.name === name);
+  if (sp) applyStepPreset(sp.steps);
+}
+
+function applyStepPreset(labels) {
+  const ns = labels.length;
+  const ni = job.inks.length;
+  job.step_labels = [...labels];
+  for (const shape of job.shapes) {
+    for (const w of shape.weights) {
+      w.steps.length = ns;
+      for (let i = 0; i < ns; i++) {
+        if (!w.steps[i]) w.steps[i] = Array(ni).fill(0);
+        else w.steps[i].length = ni;
+      }
+    }
+  }
+  buildStepPresetDropdown();
+  renderGrid();
+  pushJob();
+}
+
+// Settings modal — step preset management
+function renderStepPresetsList() {
+  const list = document.getElementById('step-presets-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const presets = settings.step_presets || [];
+  if (!presets.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:11px;font-style:italic;padding:4px 0;">No presets yet.</p>';
+    return;
+  }
+  for (let i = 0; i < presets.length; i++) {
+    const p = presets[i];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);';
+    row.innerHTML = `
+      <span style="font-weight:500;font-size:12px;min-width:110px;flex-shrink:0;">${esc(p.name)}</span>
+      <span style="color:var(--text-muted);font-size:11px;font-family:var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.steps.join(','))}">${esc(p.steps.join(', '))}</span>
+      <button onclick="deleteStepPreset(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;padding:0 3px;" title="Delete">&#x2715;</button>
+    `;
+    list.appendChild(row);
+  }
+}
+
+function addStepPreset() {
+  const nameEl  = document.getElementById('new-preset-name');
+  const stepsEl = document.getElementById('new-preset-steps');
+  const name  = nameEl.value.trim();
+  const raw   = stepsEl.value.trim();
+  if (!name)  { nameEl.focus();  return; }
+  if (!raw)   { stepsEl.focus(); return; }
+  const steps = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!steps.length) { showToast('Enter at least one step value', true); return; }
+  if ((settings.step_presets || []).some(p => p.name === name)) {
+    showToast(`"${name}" already exists`, true); return;
+  }
+  if (!settings.step_presets) settings.step_presets = [];
+  settings.step_presets.push({ name, steps });
+  renderStepPresetsList();
+  buildStepPresetDropdown();
+  buildPresetMenu();
+  nameEl.value = '';
+  stepsEl.value = '';
+  showToast(`Preset "${name}" added`);
+}
+
+function deleteStepPreset(i) {
+  const name = (settings.step_presets[i] || {}).name;
+  if (!confirm(`Delete preset "${name}"?`)) return;
+  settings.step_presets.splice(i, 1);
+  renderStepPresetsList();
+  buildStepPresetDropdown();
+  buildPresetMenu();
+}
+
+// ── Shape tabs ────────────────────────────────────────────────────────────
 function renderShapeTabs() {
   const bar = document.getElementById('shape-tab-bar');
   bar.innerHTML = '';
+
   for (let i = 0; i < job.shapes.length; i++) {
+    const shape = job.shapes[i];
     const tab = document.createElement('div');
     tab.className = 'tab' + (i === activeShapeIdx ? ' active' : '');
     tab.onclick = () => selectShape(i);
+
     const nameSpan = document.createElement('span');
-    nameSpan.textContent = job.shapes[i].name;
+    nameSpan.textContent = shapeDisplayName(shape);
     nameSpan.title = 'Double-click to rename';
     nameSpan.ondblclick = e => { e.stopPropagation(); startRenameShape(i, nameSpan, tab); };
+
     const del = document.createElement('span');
     del.className = 'tab-del';
     del.title = 'Remove shape';
     del.innerHTML = '&#x2715;';
     del.onclick = e => { e.stopPropagation(); removeShape(i); };
-    tab.appendChild(nameSpan);
-    tab.appendChild(del);
+
+    tab.append(nameSpan, del);
     bar.appendChild(tab);
   }
-  const add = document.createElement('div');
-  add.className = 'tab-add';
-  add.title = 'Add shape';
-  add.textContent = '+';
-  add.onclick = addShape;
-  bar.appendChild(add);
-  renderWeightTabs();
+
+  if (addingShape) {
+    const form = document.createElement('div');
+    form.className = 'tab-add-form';
+    form.innerHTML = `
+      <input list="dot-types-list" id="new-shape-type" placeholder="Type" style="width:72px;">
+      <input id="new-shape-num" placeholder="No." style="width:44px;">
+      <button class="confirm-btn" onclick="confirmAddShape()">Add</button>
+      <button onclick="cancelShapeAdd()">&#x2715;</button>
+    `;
+    form.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); confirmAddShape(); }
+      if (e.key === 'Escape') { e.preventDefault(); cancelShapeAdd(); }
+    });
+    bar.appendChild(form);
+    setTimeout(() => {
+      const el = document.getElementById('new-shape-type');
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  } else {
+    const add = document.createElement('div');
+    add.className = 'tab-add';
+    add.title = 'Add shape';
+    add.textContent = '+';
+    add.onclick = startShapeAdd;
+    bar.appendChild(add);
+  }
+
+  renderLpiTabs();
+}
+
+function startShapeAdd() {
+  if (addingLpi) { addingLpi = false; }
+  addingShape = true;
+  renderShapeTabs();
+}
+
+function confirmAddShape() {
+  const typeEl = document.getElementById('new-shape-type');
+  const numEl  = document.getElementById('new-shape-num');
+  const type   = (typeEl?.value || '').trim();
+  const num    = (numEl?.value || '').trim();
+  if (!type) { typeEl?.focus(); return; }
+  addingShape = false;
+  const shape = makeShape();
+  shape.dot_type   = type;
+  shape.dot_number = num;
+  job.shapes.push(shape);
+  activeLpiIdx.push(0);
+  activeShapeIdx = job.shapes.length - 1;
+  saveNewDotType(type);
+  renderShapeTabs();
+  pushJob();
+}
+
+function cancelShapeAdd() {
+  addingShape = false;
+  renderShapeTabs();
+}
+
+function startRenameShape(i, nameSpan, tab) {
+  const shape = job.shapes[i];
+  if (activeShapeIdx !== i) { selectShape(i); return; }
+
+  const container = document.createElement('span');
+  container.style.display = 'flex';
+  container.style.gap = '3px';
+
+  const typeInp = document.createElement('input');
+  typeInp.className = 'tab-edit-input';
+  typeInp.setAttribute('list', 'dot-types-list');
+  typeInp.value = shape.dot_type;
+  typeInp.placeholder = 'Type';
+  typeInp.style.width = '5em';
+
+  const numInp = document.createElement('input');
+  numInp.className = 'tab-edit-input';
+  numInp.value = shape.dot_number;
+  numInp.placeholder = '#';
+  numInp.style.width = '3em';
+
+  nameSpan.replaceWith(container);
+  container.append(typeInp, numInp);
+  typeInp.focus(); typeInp.select();
+
+  let committed = false;
+  function commit() {
+    if (committed) return;
+    committed = true;
+    const newType = typeInp.value.trim();
+    const newNum  = numInp.value.trim();
+    if (newType) {
+      shape.dot_type   = newType;
+      shape.dot_number = newNum;
+      saveNewDotType(newType);
+    }
+    pushJob();
+    renderShapeTabs();
+  }
+  for (const inp of [typeInp, numInp]) {
+    inp.addEventListener('blur',    () => setTimeout(commit, 120));
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { committed = true; renderShapeTabs(); }
+    });
+  }
 }
 
 function selectShape(i) {
+  if (addingShape) { cancelShapeAdd(); return; }
   if (activeShapeIdx === i) return;
   activeShapeIdx = i;
+  addingLpi = false;
   renderShapeTabs();
-}
-
-function addShape() {
-  const name = `Shape ${job.shapes.length + 1}`;
-  job.shapes.push({ name, weights: [makeWeight(0)] });
-  activeWeightIdx.push(0);
-  activeShapeIdx = job.shapes.length - 1;
-  renderShapeTabs();
-  pushJob();
 }
 
 function removeShape(i) {
-  if (!confirm(`Remove "${job.shapes[i].name}"?`)) return;
+  if (!confirm(`Remove "${shapeDisplayName(job.shapes[i])}"?`)) return;
   job.shapes.splice(i, 1);
-  activeWeightIdx.splice(i, 1);
+  activeLpiIdx.splice(i, 1);
   if (activeShapeIdx >= job.shapes.length) activeShapeIdx = Math.max(0, job.shapes.length - 1);
+  addingShape = false;
   renderShapeTabs();
   pushJob();
 }
 
-// ── Weight tabs ────────────────────────────────────────────────────────────
-function renderWeightTabs() {
-  const bar = document.getElementById('weight-tab-bar');
+// ── LPI tabs ──────────────────────────────────────────────────────────────
+function renderLpiTabs() {
+  const bar = document.getElementById('lpi-tab-bar');
   bar.innerHTML = '';
-  if (job.shapes.length === 0) {
-    renderGrid();
-    return;
-  }
+  if (!job.shapes.length) { renderGrid(); return; }
+
   const shape = job.shapes[activeShapeIdx];
-  const awi = activeWeightIdx[activeShapeIdx] || 0;
+  const ali   = activeLpiIdx[activeShapeIdx] || 0;
 
   for (let i = 0; i < shape.weights.length; i++) {
+    const w   = shape.weights[i];
     const tab = document.createElement('div');
-    tab.className = 'tab' + (i === awi ? ' active' : '');
-    tab.onclick = () => selectWeight(i);
-    tab.innerHTML = `${escHtml(shape.weights[i].label)}<span class="tab-del" onclick="event.stopPropagation();removeWeight(${i})" title="Remove weight">&#x2715;</span>`;
+    tab.className = 'tab' + (i === ali ? ' active' : '');
+    tab.onclick = () => selectLpi(i);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = w.lpi || `LPI ${i + 1}`;
+    nameSpan.title = 'Double-click to rename';
+    nameSpan.ondblclick = e => { e.stopPropagation(); startRenameLpi(i, nameSpan, w); };
+
+    const del = document.createElement('span');
+    del.className = 'tab-del';
+    del.title = 'Remove LPI';
+    del.innerHTML = '&#x2715;';
+    del.onclick = e => { e.stopPropagation(); removeLpi(i); };
+
+    tab.append(nameSpan, del);
     bar.appendChild(tab);
   }
-  const add = document.createElement('div');
-  add.className = 'tab-add';
-  add.title = 'Add weight';
-  add.textContent = '+';
-  add.onclick = addWeight;
-  bar.appendChild(add);
+
+  if (addingLpi) {
+    const form = document.createElement('div');
+    form.className = 'tab-add-form';
+    form.innerHTML = `
+      <input list="lpi-values-list" id="new-lpi-value" placeholder="e.g. 150#" style="width:80px;">
+      <button class="confirm-btn" onclick="confirmAddLpi()">Add</button>
+      <button onclick="cancelLpiAdd()">&#x2715;</button>
+    `;
+    form.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); confirmAddLpi(); }
+      if (e.key === 'Escape') { e.preventDefault(); cancelLpiAdd(); }
+    });
+    bar.appendChild(form);
+    setTimeout(() => {
+      const el = document.getElementById('new-lpi-value');
+      if (el) el.focus();
+    }, 0);
+  } else {
+    const add = document.createElement('div');
+    add.className = 'tab-add';
+    add.title = 'Add LPI';
+    add.textContent = '+';
+    add.onclick = startLpiAdd;
+    bar.appendChild(add);
+  }
+
   renderGrid();
 }
 
-function selectWeight(i) {
-  activeWeightIdx[activeShapeIdx] = i;
-  renderWeightTabs();
+function startLpiAdd() {
+  if (addingShape) { addingShape = false; }
+  addingLpi = true;
+  renderLpiTabs();
 }
 
-function addWeight(idx) {
+function confirmAddLpi() {
+  const inp = document.getElementById('new-lpi-value');
+  const lpi = (inp?.value || '').trim();
+  if (!lpi) { inp?.focus(); return; }
+  addingLpi = false;
   const shape = job.shapes[activeShapeIdx];
-  const nextLabel = job.weight_labels[shape.weights.length] || `W${shape.weights.length + 1}`;
-  shape.weights.push(makeWeight(shape.weights.length));
-  activeWeightIdx[activeShapeIdx] = shape.weights.length - 1;
-  renderWeightTabs();
+  shape.weights.push(makeWeight(lpi));
+  activeLpiIdx[activeShapeIdx] = shape.weights.length - 1;
+  saveNewLpiValue(lpi);
+  renderLpiTabs();
   pushJob();
 }
 
-function removeWeight(i) {
+function cancelLpiAdd() {
+  addingLpi = false;
+  renderLpiTabs();
+}
+
+function startRenameLpi(i, nameSpan, weight) {
+  if ((activeLpiIdx[activeShapeIdx] || 0) !== i) { selectLpi(i); return; }
+
+  const inp = document.createElement('input');
+  inp.className = 'tab-edit-input';
+  inp.setAttribute('list', 'lpi-values-list');
+  inp.value = weight.lpi;
+  inp.style.width = '5em';
+  nameSpan.replaceWith(inp);
+  inp.focus(); inp.select();
+
+  let committed = false;
+  function commit() {
+    if (committed) return;
+    committed = true;
+    const val = inp.value.trim();
+    if (val) { weight.lpi = val; saveNewLpiValue(val); }
+    pushJob();
+    renderLpiTabs();
+  }
+  inp.addEventListener('blur',    () => setTimeout(commit, 120));
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { committed = true; renderLpiTabs(); }
+  });
+}
+
+function selectLpi(i) {
+  if (addingLpi) { cancelLpiAdd(); return; }
+  activeLpiIdx[activeShapeIdx] = i;
+  renderLpiTabs();
+}
+
+function removeLpi(i) {
   const shape = job.shapes[activeShapeIdx];
-  if (shape.weights.length <= 1) { showToast('Cannot remove last weight', true); return; }
-  if (!confirm(`Remove weight "${shape.weights[i].label}"?`)) return;
+  if (shape.weights.length <= 1) { showToast('Cannot remove last LPI', true); return; }
+  if (!confirm(`Remove LPI "${shape.weights[i].lpi}"?`)) return;
   shape.weights.splice(i, 1);
-  if (activeWeightIdx[activeShapeIdx] >= shape.weights.length)
-    activeWeightIdx[activeShapeIdx] = shape.weights.length - 1;
-  renderWeightTabs();
+  const ali = activeLpiIdx[activeShapeIdx] || 0;
+  if (ali >= shape.weights.length) activeLpiIdx[activeShapeIdx] = shape.weights.length - 1;
+  renderLpiTabs();
   pushJob();
 }
 
-function makeWeight(idx) {
-  const label = job.weight_labels[idx] || `W${idx + 1}`;
-  const n = job.step_labels.length;
-  return { label, density: [0,0,0,0], steps: Array.from({length: n}, () => [0,0,0,0]) };
-}
-
-// ── Grid ───────────────────────────────────────────────────────────────────
+// ── Grid ──────────────────────────────────────────────────────────────────
 function renderGrid() {
   const area = document.getElementById('grid-area');
 
-  if (job.shapes.length === 0) {
-    area.innerHTML = '<div class="empty-state"><p>No shapes yet.</p><button onclick="addShape()">+ Add Shape</button></div>';
+  if (!job.shapes.length) {
+    area.innerHTML = '<div class="empty-state"><p>No shapes yet.</p><button onclick="startShapeAdd()">+ Add Shape</button></div>';
     return;
   }
-
   const shape = job.shapes[activeShapeIdx];
-  if (!shape || shape.weights.length === 0) {
-    area.innerHTML = '<div class="empty-state"><p>No weights for this shape.</p><button onclick="addWeight()">+ Add Weight</button></div>';
+  if (!shape || !shape.weights.length) {
+    area.innerHTML = '<div class="empty-state"><p>No LPI readings for this shape.</p><button onclick="startLpiAdd()">+ Add LPI</button></div>';
     return;
   }
 
-  const awi = activeWeightIdx[activeShapeIdx] || 0;
-  const weight = shape.weights[awi];
-  const stepLabels = job.step_labels;
-  const colours = job.colour_names.length === 4 ? job.colour_names : ['C','M','Y','K'];
-  const N = stepLabels.length; // e.g. 14
+  const ali    = activeLpiIdx[activeShapeIdx] || 0;
+  const weight = shape.weights[ali];
+  const inks   = job.inks;
+  const nInks  = inks.length;
+  const nSteps = job.step_labels.length;
+  const devIdx = getDeviationInkIndices();
+  const showAvgDev = devIdx.length > 0;
 
-  // tabindex layout (column-major):
-  // For colour ci (0-3), editable rows are: density + step[1..N-1]
-  // Each column has N editable cells.
-  // ci=0: ti 1..N, ci=1: ti N+1..2N, etc.
-  function tabIdx(ci, rowType, stepIdx) {
-    // rowType: 'density' | 'step', stepIdx: 1-based step index (0 = 100%, skip)
-    const base = ci * N;
-    if (rowType === 'density') return base + 1;
-    return base + 1 + stepIdx; // stepIdx >= 1
-  }
+  // Column-major tab index: ink ci has nSteps entries (density + nSteps-1 editable steps)
+  function tabI(ci, si) { return ci * nSteps + 1 + si; }
 
   const table = document.createElement('table');
   table.className = 'density-grid';
@@ -1039,15 +1525,16 @@ function renderGrid() {
   // Header
   const thead = table.createTHead();
   const hr = thead.insertRow();
-  const th0 = document.createElement('th');
-  th0.className = 'row-header';
-  th0.textContent = 'Step';
+  const th0 = document.createElement('th'); th0.className = 'row-header'; th0.textContent = 'Step';
   hr.appendChild(th0);
-  for (const c of colours) {
-    const th = document.createElement('th');
-    th.textContent = c;
-    hr.appendChild(th);
+  for (const ink of inks) {
+    const th = document.createElement('th'); th.textContent = ink.name; hr.appendChild(th);
   }
+  if (showAvgDev) {
+    const tha = document.createElement('th'); tha.textContent = 'Avg'; hr.appendChild(tha);
+    const thd = document.createElement('th'); thd.textContent = 'Dev'; hr.appendChild(thd);
+  }
+  const tht = document.createElement('th'); tht.textContent = 'Target'; hr.appendChild(tht);
 
   const tbody = table.createTBody();
 
@@ -1055,54 +1542,84 @@ function renderGrid() {
   {
     const tr = tbody.insertRow();
     tr.className = 'density-row';
-    const lbl = tr.insertCell();
-    lbl.className = 'row-label';
-    lbl.textContent = 'Max Density';
-    for (let ci = 0; ci < 4; ci++) {
+    const lbl = tr.insertCell(); lbl.className = 'row-label'; lbl.textContent = 'Max Density';
+    for (let ci = 0; ci < nInks; ci++) {
       const td = tr.insertCell();
-      const inp = makeInput(weight.density[ci], tabIdx(ci, 'density', 0), (val) => {
-        weight.density[ci] = val;
-        pushJob();
-      });
-      td.appendChild(inp);
+      td.appendChild(makeInput(weight.density[ci] || 0, tabI(ci, 0), v => {
+        weight.density[ci] = v; pushJob();
+      }));
     }
+    if (showAvgDev) {
+      tr.insertCell().className = 'avg-cell';
+      tr.insertCell().className = 'dev-cell';
+    }
+    tr.insertCell().className = 'target-cell'; // no target for density row
   }
 
   // Step rows
-  for (let si = 0; si < stepLabels.length; si++) {
-    const tr = tbody.insertRow();
-    const isReadOnly = si === 0; // 100% row
-    if (isReadOnly) tr.className = 'readonly-row';
+  for (let si = 0; si < nSteps; si++) {
+    const label     = job.step_labels[si];
+    const isHundred = label === '100';
+    const tr        = tbody.insertRow();
+    if (isHundred) tr.className = 'readonly-row';
 
-    const lbl = tr.insertCell();
-    lbl.className = 'row-label';
-    lbl.textContent = stepLabels[si] + '%';
+    const lbl = tr.insertCell(); lbl.className = 'row-label'; lbl.textContent = label + '%';
 
-    for (let ci = 0; ci < 4; ci++) {
+    if (!weight.steps[si]) weight.steps[si] = Array(nInks).fill(0);
+    const rowVals = isHundred ? Array(nInks).fill(100) : weight.steps[si];
+
+    for (let ci = 0; ci < nInks; ci++) {
       const td = tr.insertCell();
-      if (isReadOnly) {
+      if (isHundred) {
         const inp = document.createElement('input');
-        inp.type = 'text';
-        inp.className = 'cell-input';
-        inp.readOnly = true;
-        inp.tabIndex = -1;
-        const v = weight.steps[si] ? weight.steps[si][ci] : 0;
-        inp.value = v !== 0 ? String(v) : '';
+        inp.type = 'text'; inp.className = 'cell-input';
+        inp.readOnly = true; inp.tabIndex = -1; inp.value = '100';
         td.appendChild(inp);
       } else {
-        const ti = tabIdx(ci, 'step', si);
-        const inp = makeInput(weight.steps[si] ? weight.steps[si][ci] : 0, ti, (val) => {
-          if (!weight.steps[si]) weight.steps[si] = [0,0,0,0];
-          weight.steps[si][ci] = val;
+        td.appendChild(makeInput(weight.steps[si][ci] || 0, tabI(ci, si), v => {
+          weight.steps[si][ci] = v;
+          if (showAvgDev) updateRowAvgDev(tr, weight.steps[si], devIdx, label);
           pushJob();
-        });
-        td.appendChild(inp);
+        }));
       }
     }
+
+    if (showAvgDev) {
+      const ta = tr.insertCell(); ta.className = 'avg-cell';
+      const td2 = tr.insertCell(); td2.className = 'dev-cell';
+      updateRowAvgDev(tr, rowVals, devIdx, label);
+    }
+
+    // Target column — standard reference value for this step
+    const tc = tr.insertCell(); tc.className = 'target-cell';
+    const tgt = interpolateTarget(label);
+    tc.textContent = tgt !== null ? tgt.toFixed(1) : '';
   }
 
   area.innerHTML = '';
   area.appendChild(table);
+}
+
+function updateRowAvgDev(tr, rowVals, devIdx, label) {
+  const cells   = tr.querySelectorAll('td');
+  // cells order: row-label | inks... | avg | dev | target
+  const avgCell = cells[cells.length - 3];
+  const devCell = cells[cells.length - 2];
+
+  const sum = devIdx.reduce((s, i) => s + (rowVals[i] || 0), 0);
+  const avg = sum / devIdx.length;
+  avgCell.textContent = avg === 0 ? '' : avg.toFixed(1);
+
+  const target = interpolateTarget(label);
+  if (target !== null && avg !== 0) {
+    const dev = avg - target;
+    const abs = Math.abs(dev);
+    devCell.textContent = abs < 0.05 ? '0' : (dev > 0 ? '+' : '') + dev.toFixed(1);
+    devCell.className = 'dev-cell ' + (abs <= 1.5 ? 'dev-good' : abs <= 3.0 ? 'dev-ok' : 'dev-bad');
+  } else {
+    devCell.textContent = '';
+    devCell.className = 'dev-cell';
+  }
 }
 
 function makeInput(value, ti, onChange) {
@@ -1119,34 +1636,57 @@ function makeInput(value, ti, onChange) {
     onChange(v);
   });
 
-  // 300ms settle timer — auto-advance after X-Rite scan deposits a value
-  inp.addEventListener('input', () => {
-    clearTimeout(settleTimer);
-    if (inp.value.trim() !== '') {
-      settleTimer = setTimeout(() => {
-        if (document.activeElement === inp && inp.value.trim() !== '') {
-          const next = document.querySelector(`[tabindex="${ti + 1}"]`);
-          if (next) {
-            const v = parseFloat(inp.value) || 0;
-            inp.classList.toggle('has-value', v !== 0);
-            onChange(v);
-            next.focus();
-            next.select();
-          }
-        }
-      }, 300);
-    }
-  });
-
   inp.addEventListener('focus', () => inp.select());
   return inp;
 }
 
-// ── Session save / load ────────────────────────────────────────────────────
+// ── Sample data + clear ───────────────────────────────────────────────────
+function fillSampleData() {
+  if (!job.shapes.length) { showToast('Add a shape first', true); return; }
+  const shape  = job.shapes[activeShapeIdx];
+  const weight = shape.weights[activeLpiIdx[activeShapeIdx] || 0];
+  if (!weight) return;
+
+  // Typical solid ink densities per ink kind
+  const stdDensity = {cyan:1.45, magenta:1.40, yellow:1.05, black:1.62, white:0.90, spot:1.35};
+  weight.density = job.inks.map(ink => stdDensity[ink.kind] ?? 1.35);
+
+  // Per-ink offset from the dot gain target (gives realistic per-colour variation)
+  const offsets = [-0.5, 0.8, 1.3, -0.3, 0.0, 0.6];
+
+  weight.steps = job.step_labels.map(label => {
+    if (label === '100') return Array(job.inks.length).fill(100);
+    const target = interpolateTarget(label);
+    if (target === null) return Array(job.inks.length).fill(0);
+    return job.inks.map((_, ci) => {
+      const raw = target + (offsets[ci % offsets.length] ?? 0);
+      return Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10;
+    });
+  });
+
+  renderGrid();
+  pushJob();
+  showToast('Sample data filled');
+}
+
+function clearCurrentWeight() {
+  if (!job.shapes.length) return;
+  const shape  = job.shapes[activeShapeIdx];
+  const weight = shape.weights[activeLpiIdx[activeShapeIdx] || 0];
+  if (!weight) return;
+  const ni = job.inks.length;
+  const ns = job.step_labels.length;
+  weight.density = Array(ni).fill(0);
+  weight.steps   = Array.from({length: ns}, () => Array(ni).fill(0));
+  renderGrid();
+  pushJob();
+  showToast('Cleared');
+}
+
+// ── Session ───────────────────────────────────────────────────────────────
 function saveSession() {
-  const filename = (job.job_number || 'session') + '.json';
-  const blob = new Blob([JSON.stringify(job, null, 2)], { type: 'application/json' });
-  downloadBlob(blob, filename);
+  const name = (job.job_number || job.job_name || 'session').replace(/[/\\?%*:|"<>]/g, '_');
+  downloadBlob(new Blob([JSON.stringify(job, null, 2)], {type:'application/json'}), name + '.json');
   showToast('Session saved');
 }
 
@@ -1154,95 +1694,90 @@ function loadSessionFile(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = async (e) => {
+  reader.onload = async e => {
     try {
       const loaded = JSON.parse(e.target.result);
-      await fetch('/api/job', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loaded),
-      });
+      await fetch('/api/job', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(loaded)});
       job = loaded;
       activeShapeIdx = 0;
-      activeWeightIdx = job.shapes.map(() => 0);
-      populateMetadata();
-      populateDropdowns();
-      renderWeightChips();
-      renderStepPreset();
-      renderShapeTabs();
+      activeLpiIdx = job.shapes.map(() => 0);
+      addingShape = false;
+      addingLpi = false;
+      renderAll();
       showToast('Session loaded');
     } catch (err) {
-      showToast('Failed to load session: ' + err.message, true);
+      showToast('Failed to load: ' + err.message, true);
     }
   };
   reader.readAsText(file);
   event.target.value = '';
 }
 
-// ── Export Excel ───────────────────────────────────────────────────────────
+function newJob() {
+  if (job.shapes.length && !confirm('Start a new job? Unsaved data will be lost.')) return;
+  job = makeDefaultJob();
+  activeShapeIdx = 0;
+  activeLpiIdx = [];
+  addingShape = false;
+  addingLpi = false;
+  pushJob();
+  renderAll();
+}
+
+async function pushJob() {
+  try {
+    await fetch('/api/job', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
+  } catch {}
+}
+
+// ── Exports ───────────────────────────────────────────────────────────────
 async function exportExcel() {
   showToast('Exporting Excel…');
   try {
-    const r = await fetch('/api/export/excel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job),
-    });
-    if (!r.ok) {
-      const msg = await r.text();
-      showToast('Excel export failed: ' + msg, true);
-      return;
-    }
+    const r = await fetch('/api/export/excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
+    if (!r.ok) { showToast('Excel error: ' + await r.text(), true); return; }
     const blob = await r.blob();
     const cd = r.headers.get('Content-Disposition') || '';
-    const match = cd.match(/filename="([^"]+)"/);
-    const filename = match ? match[1] : (job.job_number || 'export') + '.xlsx';
-    downloadBlob(blob, filename);
+    const m = cd.match(/filename="([^"]+)"/);
+    downloadBlob(blob, m ? m[1] : 'export.xlsx');
     showToast('Excel exported');
-  } catch (err) {
-    showToast('Excel export error: ' + err.message, true);
-  }
+  } catch (e) { showToast('Excel error: ' + e.message, true); }
 }
 
-// ── Export SVG ─────────────────────────────────────────────────────────────
+async function printReport() {
+  showToast('Generating report…');
+  try {
+    const r = await fetch('/api/export/report', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
+    if (!r.ok) { showToast('Report error: ' + await r.text(), true); return; }
+    const html = await r.text();
+    const win = window.open('', '_blank');
+    if (win) { win.document.open(); win.document.write(html); win.document.close(); }
+    showToast('Report opened');
+  } catch (e) { showToast('Report error: ' + e.message, true); }
+}
+
 async function exportSVG() {
   showToast('Generating SVG…');
   try {
-    const r = await fetch('/api/export/svg', { method: 'POST' });
+    const r = await fetch('/api/export/svg', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
     if (!r.ok) throw new Error(await r.text());
-    const blob = await r.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (job?.job_number || 'export') + '.svg';
-    a.click();
+    downloadBlob(await r.blob(), (job.job_number || 'export') + '.svg');
     showToast('SVG downloaded');
-  } catch (e) {
-    showToast('SVG export error: ' + e.message, true);
-  }
+  } catch (e) { showToast('SVG error: ' + e.message, true); }
 }
 
-// ── Export PDF (via companion) ─────────────────────────────────────────────
 async function probeCompanion() {
   try {
-    const r = await fetch('http://localhost:7432/health', {
-      signal: AbortSignal.timeout(700),
-    });
+    const r = await fetch('http://localhost:7432/health', {signal: AbortSignal.timeout(700)});
     companionAvailable = r.ok;
-  } catch {
-    companionAvailable = false;
-  }
+  } catch { companionAvailable = false; }
   updatePdfButton();
 }
 
 function updatePdfButton() {
   const btn = document.getElementById('pdf-btn');
-  if (companionAvailable) {
-    btn.disabled = false;
-    btn.title = '';
-  } else {
-    btn.disabled = true;
-    btn.title = 'Start companion (ink-density-tool.exe --companion) to enable PDF export';
-  }
+  btn.disabled = !companionAvailable;
+  btn.title = companionAvailable ? '' : 'Start companion (ink-density-tool.exe --companion) to enable';
   for (const el of document.querySelectorAll('.locate-btn')) {
     el.disabled = !companionAvailable;
     el.title = companionAvailable ? 'Browse on companion PC' : 'Start companion to enable';
@@ -1253,112 +1788,72 @@ async function locateFile(inputId, filter) {
   if (!companionAvailable) return;
   try {
     const r = await fetch(`http://localhost:7432/browse/file?filter=${filter}`);
-    if (r.status === 204) return;  // user cancelled
+    if (r.status === 204) return;
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
     if (data.path) document.getElementById(inputId).value = data.path;
-  } catch (e) {
-    showToast('Could not open file browser: ' + e.message, true);
-  }
+  } catch (e) { showToast('File browser: ' + e.message, true); }
 }
 
 async function exportPDF() {
   if (!companionAvailable) return;
   showToast('Exporting PDF via Illustrator…');
   try {
-    const r = await fetch('http://localhost:7432/export/pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job),
-    });
-    if (!r.ok) {
-      const msg = await r.text();
-      showToast('PDF export failed: ' + msg, true);
-      return;
-    }
+    const r = await fetch('http://localhost:7432/export/pdf', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
+    if (!r.ok) { showToast('PDF error: ' + await r.text(), true); return; }
     const blob = await r.blob();
     const cd = r.headers.get('Content-Disposition') || '';
-    const match = cd.match(/filename="([^"]+)"/);
-    const filename = match ? match[1] : (job.job_number || 'export') + '.pdf';
-    downloadBlob(blob, filename);
+    const m = cd.match(/filename="([^"]+)"/);
+    downloadBlob(blob, m ? m[1] : 'export.pdf');
     showToast('PDF exported');
-  } catch (err) {
-    showToast('PDF export error: ' + err.message, true);
+  } catch (e) {
+    showToast('PDF error: ' + e.message, true);
     companionAvailable = false;
     updatePdfButton();
   }
 }
 
-// ── Settings modal ─────────────────────────────────────────────────────────
-function buildXcmFields() {
-  const container = document.getElementById('xcm-fields');
-  const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
-  for (const f of XCM_FIELDS) {
-    const row = document.createElement('div');
-    row.className = 'settings-row';
-    row.innerHTML = `<label>${escHtml(f.label)}</label><input id="xcm-${f.key}" type="text" placeholder="${escHtml(f.dflt)}">`;
-    grid.appendChild(row);
-  }
-  container.appendChild(grid);
-}
-
+// ── Settings modal ────────────────────────────────────────────────────────
 function openSettings() {
-  // Server settings
-  document.getElementById('s-excel-template').value = settings['excel_template'] || '';
-  // Build XCM fields
-  for (const f of XCM_FIELDS) {
-    const el = document.getElementById(`xcm-${f.key}`);
-    if (el) el.value = settings[f.key] || '';
-  }
-  // Try to fetch companion settings
-  fetchCompanionSettings();
+  document.getElementById('s-illustrator-path').value  = settings.illustrator_path || '';
+  document.getElementById('s-ai-template').value       = settings.ai_template || '';
+  document.getElementById('s-ai-template-ext').value   = settings.ai_template_extended || '';
+  renderStepPresetsList();
+  if (companionAvailable) fetchCompanionSettings();
   document.getElementById('modal-overlay').hidden = false;
 }
 
 async function fetchCompanionSettings() {
-  if (!companionAvailable) return;
   try {
     const r = await fetch('http://localhost:7432/settings');
     const cs = await r.json();
-    document.getElementById('s-illustrator-path').value = cs['illustrator_path'] || '';
-    document.getElementById('s-ai-template').value = cs['ai_template'] || '';
-    document.getElementById('s-ai-template-ext').value = cs['ai_template_extended'] || '';
-  } catch { /* companion may not be running */ }
+    document.getElementById('s-illustrator-path').value = cs.illustrator_path || '';
+    document.getElementById('s-ai-template').value      = cs.ai_template || '';
+    document.getElementById('s-ai-template-ext').value  = cs.ai_template_extended || '';
+  } catch {}
 }
 
 async function saveSettings() {
-  // Server settings patch
-  const serverPatch = { excel_template: document.getElementById('s-excel-template').value };
-  for (const f of XCM_FIELDS) {
-    const el = document.getElementById(`xcm-${f.key}`);
-    if (el) serverPatch[f.key] = el.value;
-  }
-  try {
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(serverPatch),
-    });
-    Object.assign(settings, serverPatch);
-  } catch (e) {
-    showToast('Failed to save server settings: ' + e.message, true);
-  }
+  settings.illustrator_path     = document.getElementById('s-illustrator-path').value;
+  settings.ai_template          = document.getElementById('s-ai-template').value;
+  settings.ai_template_extended = document.getElementById('s-ai-template-ext').value;
 
-  // Companion settings patch (if companion is running)
+  try {
+    await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)});
+  } catch (e) { showToast('Settings save error: ' + e.message, true); }
+
   if (companionAvailable) {
-    const companionPatch = {
-      illustrator_path:    document.getElementById('s-illustrator-path').value,
-      ai_template:         document.getElementById('s-ai-template').value,
-      ai_template_extended: document.getElementById('s-ai-template-ext').value,
-    };
     try {
       await fetch('http://localhost:7432/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(companionPatch),
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          illustrator_path:    settings.illustrator_path,
+          ai_template:         settings.ai_template,
+          ai_template_extended: settings.ai_template_extended,
+        }),
       });
-    } catch { /* non-fatal */ }
+    } catch {}
   }
 
   closeSettings();
@@ -1369,13 +1864,65 @@ function closeSettings() {
   document.getElementById('modal-overlay').hidden = true;
 }
 
-// ── Utilities ──────────────────────────────────────────────────────────────
+// ── Render all ────────────────────────────────────────────────────────────
+function renderAll() {
+  populateMetadata();
+  renderInkCheckboxes();
+  buildStepPresetDropdown();
+  buildPresetMenu();
+  updateDotTypeDatalist();
+  updateLpiDatalist();
+  renderShapeTabs();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([fetchJob(), fetchSettings()]);
+  renderAll();
+  probeCompanion();
+  fetchBuildVersion();
+}
+
+async function fetchJob() {
+  try {
+    const r = await fetch('/api/job');
+    job = await r.json();
+    activeLpiIdx = job.shapes.map(() => 0);
+    if (activeShapeIdx >= job.shapes.length) activeShapeIdx = 0;
+  } catch {
+    job = makeDefaultJob();
+    activeLpiIdx = [];
+  }
+}
+
+async function fetchSettings() {
+  try {
+    const r = await fetch('/api/settings');
+    settings = await r.json();
+    if (!settings.dot_types)    settings.dot_types    = [];
+    if (!settings.lpi_values)   settings.lpi_values   = [];
+    if (!settings.step_presets) settings.step_presets = [];
+    if (!settings.job_presets)  settings.job_presets  = [];
+  } catch {
+    settings = { job_presets:[], step_presets:[], dot_types:[], lpi_values:[] };
+  }
+}
+
+async function fetchBuildVersion() {
+  try {
+    const r = await fetch('/api/version');
+    const { build_ts } = await r.json();
+    const d = new Date(Number(build_ts) * 1000);
+    document.getElementById('build-footer').textContent =
+      `built ${d.toLocaleString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}`;
+  } catch {}
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
@@ -1388,26 +1935,15 @@ function showToast(msg, isError = false) {
   t._timer = setTimeout(() => { t.hidden = true; }, 3500);
 }
 
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
-}
-
-// Close modal on overlay click
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeSettings();
 });
-
-// Escape key closes modal
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeSettings();
 });
 
-// ── Boot ───────────────────────────────────────────────────────────────────
 init();
+
 </script>
 </body>
 </html>
