@@ -1036,7 +1036,13 @@ function renderSpotChips() {
     if (ink.kind !== 'spot') continue;
     const chip = document.createElement('span');
     chip.className = 'chip';
-    chip.innerHTML = `${esc(ink.name)}<span class="chip-del" title="Remove" onclick="removeSpotInk(${JSON.stringify(ink.name)})">&#x2715;</span>`;
+    chip.textContent = ink.name;
+    const del = document.createElement('span');
+    del.className = 'chip-del';
+    del.title = 'Remove';
+    del.textContent = '✕';
+    del.addEventListener('click', () => removeSpotInk(ink.name));
+    chip.appendChild(del);
     container.appendChild(chip);
   }
 }
@@ -1601,10 +1607,9 @@ function renderGrid() {
 }
 
 function updateRowAvgDev(tr, rowVals, devIdx, label) {
-  const cells   = tr.querySelectorAll('td');
-  // cells order: row-label | inks... | avg | dev | target
-  const avgCell = cells[cells.length - 3];
-  const devCell = cells[cells.length - 2];
+  const avgCell = tr.querySelector('td.avg-cell');
+  const devCell = tr.querySelector('td.dev-cell');
+  if (!avgCell || !devCell) return;
 
   const sum = devIdx.reduce((s, i) => s + (rowVals[i] || 0), 0);
   const avg = sum / devIdx.length;
