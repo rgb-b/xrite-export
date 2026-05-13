@@ -8,6 +8,7 @@
 //!   POST /api/settings                 → replace settings
 //!   POST /api/export/excel             → body = JobConfig JSON → stream .xlsx
 //!   POST /api/export/report            → body = JobConfig JSON → print-ready HTML
+//!   POST /api/export/comparison        → body = [JobConfig, …] JSON → print-ready HTML
 //!   POST /api/export/svg               → body = JobConfig JSON → stream .svg
 //!   GET  /api/export/builder-script    → download build_ai_template.jsx
 //!   GET  /api/version                  → { build_ts }
@@ -47,6 +48,7 @@ async fn serve() {
         .route("/api/settings", get(get_settings).post(put_settings))
         .route("/api/export/excel", post(export_excel))
         .route("/api/export/report", post(export_report))
+        .route("/api/export/comparison", post(export_comparison))
         .route("/api/export/svg", post(export_svg_handler))
         .route("/api/export/builder-script", get(download_builder_script))
         .route("/api/version", get(get_version))
@@ -136,6 +138,16 @@ async fn export_excel(Json(job): Json<JobConfig>) -> Response {
 
 async fn export_report(Json(job): Json<JobConfig>) -> Response {
     let html = crate::export::report::generate_report(&job);
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/html; charset=utf-8")
+        .body(html.into())
+        .unwrap()
+}
+
+async fn export_comparison(Json(jobs): Json<Vec<JobConfig>>) -> Response {
+    let refs: Vec<&JobConfig> = jobs.iter().collect();
+    let html = crate::export::report::generate_comparison_report(&refs);
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "text/html; charset=utf-8")
