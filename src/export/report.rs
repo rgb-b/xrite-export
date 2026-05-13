@@ -643,23 +643,43 @@ tr:nth-child(even):not(.row-density) td.td-data { background: #fafafa; }
 tr:nth-child(even):not(.row-density) td.td-avg  { background: #f0fdf4; }
 
 /* ── Combined report — compact overrides ── */
-body.combined .report-header { margin-bottom: 2mm; }
-body.combined .accent-bar    { height: 4px; }
-body.combined .header-inner  { padding: 3mm 12mm 3mm; }
-body.combined .customer      { font-size: 13pt; margin-bottom: 2pt; }
-body.combined .job-name      { font-size: 9.5pt; margin-bottom: 2pt; }
-body.combined .spec-tag      { font-size: 7pt; padding: 1pt 4pt; }
-body.combined .detail-item   { margin-bottom: 2pt; }
-body.combined .detail-value  { font-size: 8pt; }
-body.combined .shape-section { padding: 0 12mm; margin-bottom: 3mm; }
-body.combined .shape-label   { font-size: 7.5pt; padding: 2pt 6pt; }
-body.combined .job-section   { margin-bottom: 0; }
-body.combined .job-section + .job-section { margin-top: 4mm; }
-body.combined .job-section .accent-bar { display: none; }
-body.combined .job-section .header-inner { border-bottom: none; padding-top: 1mm; }
-body.combined .shared-banner .header-inner { padding: 3mm 12mm; }
-body.combined .shared-banner .customer     { font-size: 14pt; margin-bottom: 2pt; }
-body.combined .shared-banner .detail-value { font-size: 9pt; }
+body.combined .report-header  { margin-bottom: 2mm; }
+body.combined .accent-bar     { height: 4px; }
+body.combined .shape-section  { padding: 0 12mm; margin-bottom: 3mm; }
+body.combined .shape-label    { font-size: 7.5pt; padding: 2pt 6pt; }
+body.combined .job-section    { margin-bottom: 0; }
+body.combined .job-section + .job-section { margin-top: 3mm; }
+
+/* Shared banner */
+body.combined .shared-banner .header-inner {
+  padding: 4mm 12mm 3mm; flex-direction: column; gap: 3pt; align-items: flex-start;
+}
+body.combined .shared-banner .customer   { font-size: 14pt; margin-bottom: 1pt; }
+body.combined .shared-banner .spec-line  { flex-wrap: wrap; gap: 3pt; }
+body.combined .shared-banner .spec-tag   { font-size: 7pt; padding: 1pt 5pt; }
+body.combined .banner-info-row {
+  font-size: 7.5pt; color: #64748b;
+  display: flex; flex-wrap: wrap; gap: 8pt; margin-top: 2pt;
+}
+body.combined .banner-info-row span b { color: #374151; font-weight: 600; }
+
+/* Per-job compact bar — single line, no column layout */
+body.combined .job-section .accent-bar  { display: none; }
+body.combined .job-section .report-header { margin-bottom: 1mm; }
+body.combined .job-bar {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 2mm 12mm; border-bottom: 0.5pt solid #e2e8f0;
+}
+body.combined .job-bar-left {
+  font-size: 9pt; font-weight: 700; color: #1e293b;
+  display: flex; align-items: baseline; gap: 6pt;
+}
+body.combined .job-bar-num  { font-size: 8pt; color: #64748b; font-weight: 500; }
+body.combined .job-bar-right {
+  font-size: 7.5pt; color: #64748b;
+  display: flex; gap: 8pt;
+}
+body.combined .job-bar-right span b { color: #374151; font-weight: 600; }
 "#;
 
 // ── Combined multi-job report ─────────────────────────────────────────────────
@@ -677,7 +697,7 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
 
     let first = jobs[0];
 
-    // ── Identify shared vs unique fields ──────────────────────────────────────
+    // ── Shared field detection ────────────────────────────────────────────────
     let s_customer   = all_same(jobs, |j| &j.customer);
     let s_job_name   = all_same(jobs, |j| &j.job_name);
     let s_plate_tech = all_same(jobs, |j| &j.plate_tech);
@@ -687,71 +707,59 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
     let s_date       = all_same(jobs, |j| &j.date);
     let s_set        = all_same(jobs, |j| &j.set_number);
 
-    // Shared inks string (names only, for display)
-    let inks_str = |j: &JobConfig| j.inks.iter().map(|i| i.name.clone()).collect::<Vec<_>>().join(",");
-    let s_inks = {
-        let first_inks = inks_str(first);
-        !first_inks.is_empty() && jobs.iter().all(|j| inks_str(j) == first_inks)
-    };
+    let inks_key = |j: &JobConfig| j.inks.iter().map(|i| i.name.clone()).collect::<Vec<_>>().join(",");
+    let s_inks = { let k = inks_key(first); !k.is_empty() && jobs.iter().all(|j| inks_key(j) == k) };
+
+    // Shapes are shared if every job has the same set of display names in the same order
+    let shapes_key = |j: &JobConfig| j.shapes.iter().map(|s| s.display_name()).collect::<Vec<_>>().join("|");
+    let s_shapes = { let k = shapes_key(first); !k.is_empty() && jobs.iter().all(|j| shapes_key(j) == k) };
 
     // ── Shared banner ─────────────────────────────────────────────────────────
-    let customer_html = if s_customer && !first.customer.is_empty() {
+    let customer_h = if s_customer && !first.customer.is_empty() {
         format!(r#"<div class="customer">{}</div>"#, esc(&first.customer))
     } else { String::new() };
 
-    let job_name_html = if s_job_name && !first.job_name.is_empty() {
+    let job_name_h = if s_job_name && !first.job_name.is_empty() {
         format!(r#"<div class="job-name">{}</div>"#, esc(&first.job_name))
     } else { String::new() };
 
-    let shared_spec_tags: String = [
+    // Spec tags: plate/press/print type + shapes if shared
+    let mut spec_parts: Vec<String> = Vec::new();
+    for s in [
         if s_plate_tech { first.plate_tech.as_str() } else { "" },
         if s_esxr       { first.esxr_number.as_str() } else { "" },
         if s_press      { first.press_system.as_str() } else { "" },
         if s_print_type { first.print_type.as_str() } else { "" },
-    ]
-    .iter()
-    .filter(|s| !s.is_empty())
-    .map(|s| format!(r#"<span class="spec-tag">{}</span>"#, esc(s)))
-    .collect::<Vec<_>>()
-    .join(" ");
-
-    let shared_specs = if !shared_spec_tags.is_empty() {
-        format!(r#"<div class="spec-line">{shared_spec_tags}</div>"#)
-    } else { String::new() };
-
-    // Shared right-side detail items (date / set if same across all jobs)
-    let shared_right_items: String = {
-        let mut items = String::new();
-        if s_date && !first.date.is_empty() {
-            items.push_str(&format!(
-                r#"<div class="detail-item"><span class="detail-label">DATE</span><span class="detail-value">{}</span></div>"#,
-                esc(&first.date)
-            ));
+    ] {
+        if !s.is_empty() { spec_parts.push(format!(r#"<span class="spec-tag">{}</span>"#, esc(s))); }
+    }
+    if s_shapes {
+        for shape in &first.shapes {
+            spec_parts.push(format!(r#"<span class="spec-tag">{}</span>"#, esc(&shape.display_name())));
         }
-        if s_set && !first.set_number.is_empty() {
-            items.push_str(&format!(
-                r#"<div class="detail-item"><span class="detail-label">SET</span><span class="detail-value">{}</span></div>"#,
-                esc(&first.set_number)
-            ));
-        }
-        if s_inks {
-            let ink_names = first.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(", ");
-            items.push_str(&format!(
-                r#"<div class="detail-item"><span class="detail-label">INKS</span><span class="detail-value">{}</span></div>"#,
-                esc(&ink_names)
-            ));
-        }
-        items.push_str(&format!(
-            r#"<div class="detail-item"><span class="detail-label">JOBS</span><span class="detail-value">{}</span></div>"#,
-            jobs.len()
-        ));
-        items
+    }
+    let shared_specs = if spec_parts.is_empty() { String::new() } else {
+        format!(r#"<div class="spec-line">{}</div>"#, spec_parts.join(" "))
     };
 
-    let shared_right = format!(r#"<div class="header-right">{shared_right_items}</div>"#);
+    // Info row at bottom of banner: date / set / inks if shared
+    let mut info_parts: Vec<String> = Vec::new();
+    if s_date && !first.date.is_empty() {
+        info_parts.push(format!("<span><b>Date</b> {}</span>", esc(&first.date)));
+    }
+    if s_set && !first.set_number.is_empty() {
+        info_parts.push(format!("<span><b>Set</b> {}</span>", esc(&first.set_number)));
+    }
+    if s_inks {
+        let names = first.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ");
+        info_parts.push(format!("<span><b>Inks</b> {}</span>", esc(&names)));
+    }
+    let info_row = if info_parts.is_empty() { String::new() } else {
+        format!(r#"<div class="banner-info-row">{}</div>"#, info_parts.join(""))
+    };
 
-    let shared_banner = if customer_html.is_empty() && job_name_html.is_empty()
-        && shared_specs.is_empty() && shared_right_items.is_empty()
+    let shared_banner = if customer_h.is_empty() && job_name_h.is_empty()
+        && shared_specs.is_empty() && info_row.is_empty()
     {
         String::new()
     } else {
@@ -759,8 +767,7 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
             r#"<header class="report-header shared-banner">
 <div class="accent-bar"></div>
 <div class="header-inner">
-  <div class="header-left">{customer_html}{job_name_html}{shared_specs}</div>
-  {shared_right}
+  {customer_h}{job_name_h}{shared_specs}{info_row}
 </div>
 </header>"#
         )
@@ -768,16 +775,17 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
 
     // ── Per-job sections ──────────────────────────────────────────────────────
     let job_sections: String = jobs.iter().map(|job| {
-        // Only show fields in the per-job header that differ across jobs.
-        let customer_h = if !s_customer && !job.customer.is_empty() {
-            format!(r#"<div class="customer">{}</div>"#, esc(&job.customer))
+        // Left: job name (if unique) + job number inline
+        let name_part = if !s_job_name && !job.job_name.is_empty() {
+            format!(r#"<span>{}</span>"#, esc(&job.job_name))
         } else { String::new() };
 
-        let job_name_h = if !s_job_name && !job.job_name.is_empty() {
-            format!(r#"<div class="job-name">{}</div>"#, esc(&job.job_name))
+        let num_part = if !job.job_number.is_empty() {
+            format!(r#"<span class="job-bar-num">#{}</span>"#, esc(&job.job_number))
         } else { String::new() };
 
-        let spec_tags: String = [
+        // Unique spec tags (plate/press/print if they differ)
+        let unique_specs: String = [
             if !s_plate_tech { job.plate_tech.as_str() } else { "" },
             if !s_esxr       { job.esxr_number.as_str() } else { "" },
             if !s_press      { job.press_system.as_str() } else { "" },
@@ -785,60 +793,51 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
         ]
         .iter()
         .filter(|s| !s.is_empty())
-        .map(|s| format!(r#"<span class="spec-tag">{}</span>"#, esc(s)))
+        .map(|s| format!(r#"<span class="job-bar-num">{}</span>"#, esc(s)))
         .collect::<Vec<_>>()
         .join(" ");
 
-        let specs_h = if !spec_tags.is_empty() {
-            format!(r#"<div class="spec-line">{spec_tags}</div>"#)
-        } else { String::new() };
-
-        // Right side: only show job-unique identity fields
-        let right_items: String = {
-            let mut items = String::new();
-            if !job.job_number.is_empty() {
-                items.push_str(&format!(
-                    r#"<div class="detail-item"><span class="detail-label">JOB</span><span class="detail-value">{}</span></div>"#,
-                    esc(&job.job_number)
-                ));
-            }
-            if !s_date && !job.date.is_empty() {
-                items.push_str(&format!(
-                    r#"<div class="detail-item"><span class="detail-label">DATE</span><span class="detail-value">{}</span></div>"#,
-                    esc(&job.date)
-                ));
-            }
-            if !s_set && !job.set_number.is_empty() {
-                items.push_str(&format!(
-                    r#"<div class="detail-item"><span class="detail-label">SET</span><span class="detail-value">{}</span></div>"#,
-                    esc(&job.set_number)
-                ));
-            }
-            items
+        // Right: unique date / set / inks / customer
+        let mut right_parts: Vec<String> = Vec::new();
+        if !s_customer && !job.customer.is_empty() {
+            right_parts.push(format!("<span><b>{}</b></span>", esc(&job.customer)));
+        }
+        if !s_date && !job.date.is_empty() {
+            right_parts.push(format!("<span><b>Date</b> {}</span>", esc(&job.date)));
+        }
+        if !s_set && !job.set_number.is_empty() {
+            right_parts.push(format!("<span><b>Set</b> {}</span>", esc(&job.set_number)));
+        }
+        if !s_inks {
+            let names = job.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ");
+            right_parts.push(format!("<span><b>Inks</b> {}</span>", esc(&names)));
+        }
+        let right_h = if right_parts.is_empty() { String::new() } else {
+            format!(r#"<div class="job-bar-right">{}</div>"#, right_parts.join(""))
         };
 
-        let right_h = if right_items.is_empty() { String::new() } else {
-            format!(r#"<div class="header-right">{right_items}</div>"#)
-        };
-
-        // Skip the per-job header entirely if there's nothing unique to show
-        let header_h = if customer_h.is_empty() && job_name_h.is_empty()
-            && specs_h.is_empty() && right_h.is_empty()
+        // Only render the job bar if there's something to show
+        let bar = if name_part.is_empty() && num_part.is_empty()
+            && unique_specs.is_empty() && right_h.is_empty()
         {
             String::new()
         } else {
             format!(
-                r#"<header class="report-header">
-<div class="accent-bar"></div>
-<div class="header-inner">
-  <div class="header-left">{customer_h}{job_name_h}{specs_h}</div>
+                r#"<div class="job-bar">
+  <div class="job-bar-left">{name_part}{num_part}{unique_specs}</div>
   {right_h}
-</div>
-</header>"#
+</div>"#
             )
         };
 
-        format!(r#"<div class="job-section">{header_h}{body}</div>"#, body = build_body(job))
+        // If shapes are shared, suppress the per-job shape headings
+        let body = if s_shapes {
+            build_body_no_headings(job)
+        } else {
+            build_body(job)
+        };
+
+        format!(r#"<div class="job-section">{bar}{body}</div>"#)
     }).collect();
 
     let title = format!("Combined Report ({} jobs)", jobs.len());
@@ -865,6 +864,21 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
         shared_banner = shared_banner,
         job_sections  = job_sections,
     )
+}
+
+/// Like `build_body` but omits the shape heading label (used when shape
+/// names are already shown in the shared banner).
+fn build_body_no_headings(job: &JobConfig) -> String {
+    if job.shapes.is_empty() {
+        return r#"<p class="empty-note">No data recorded.</p>"#.to_string();
+    }
+    job.shapes.iter()
+        .map(|shape| {
+            let table = build_shape_table(job, shape);
+            format!(r#"<section class="shape-section">{table}</section>"#)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Returns true if the extracted string field is non-empty and identical
