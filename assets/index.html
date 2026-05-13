@@ -81,6 +81,7 @@ body {
 .tbtn:disabled { opacity: .35; cursor: default; }
 .tbtn.primary { background: var(--accent); border-color: var(--accent); }
 .tbtn.primary:hover { background: var(--accent-hover); }
+.tbtn.active { background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.4); }
 
 /* Preset dropdown */
 .tb-dropdown { position: relative; }
@@ -622,6 +623,176 @@ body {
 }
 #modal-footer button.primary:hover { background: var(--accent-hover); }
 
+/* ── Today button ────────────────────────────────────────────────────────── */
+.today-btn {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--btn-bg);
+  cursor: pointer;
+  white-space: nowrap;
+  align-self: stretch;
+}
+.today-btn:hover { background: var(--btn-hover); }
+
+/* ── Compare panel ───────────────────────────────────────────────────────── */
+#compare-panel {
+  width: 290px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#compare-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+#compare-header button {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  opacity: .7;
+  padding: 0 2px;
+}
+#compare-header button:hover { opacity: 1; }
+#compare-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  font-size: 12px;
+}
+.cmp-section {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin: 10px 0 6px;
+}
+.cmp-section:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.cmp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.cmp-label {
+  width: 72px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding-top: 1px;
+}
+.cmp-vals {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cmp-val-same {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmp-val-a, .cmp-val-b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmp-val-a { background: #dbeafe; color: #1e40af; }
+.cmp-val-b { background: #dcfce7; color: #166534; }
+.cmp-val-a:hover { background: #bfdbfe; }
+.cmp-val-b:hover { background: #bbf7d0; }
+.cmp-val-tag {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: .7;
+  flex-shrink: 0;
+}
+/* Grid comparison table */
+.cmp-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: var(--mono);
+  margin-top: 6px;
+}
+.cmp-grid-table th {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  padding: 2px 5px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.cmp-grid-table td {
+  border: 1px solid #e5e7eb;
+  padding: 1px 4px;
+  text-align: center;
+}
+.cmp-delta-good { background: #dcfce7; color: #166534; }
+.cmp-delta-ok   { background: #fef9c3; color: #713f12; }
+.cmp-delta-bad  { background: #fee2e2; color: #991b1b; }
+.cmp-delta-zero { color: var(--text-muted); }
+
+/* ── Settings extras ─────────────────────────────────────────────────────── */
+.s-add-btn {
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--btn-bg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.s-add-btn:hover { background: var(--btn-hover); }
+.s-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.s-field-chip {
+  display: inline-block;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
 /* Toast */
 #toast {
   position: fixed;
@@ -678,6 +849,9 @@ body {
   <button class="tbtn" onclick="exportSVG()">&#x25F1; SVG</button>
   <button class="tbtn" id="pdf-btn" onclick="exportPDF()" disabled title="Start companion to enable PDF export">&#x1F4C4; PDF</button>
 
+  <button class="tbtn" id="compare-btn" onclick="document.getElementById('compare-file').click()" title="Load a second session to compare">&#x21C4; Compare</button>
+  <input id="compare-file" type="file" accept=".json" hidden onchange="loadCompareFile(event)">
+
   <button class="tbtn" onclick="openSettings()" title="Settings">&#x2699;</button>
 </header>
 
@@ -704,23 +878,22 @@ body {
 
     <div id="fr-plate-press" class="field-row">
       <label>Plate / Press</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <div class="toggle-group" id="plate-tech-group">
-          <button class="tgl" data-val="CRS" onclick="setPlateTech('CRS')">CRS</button>
-          <button class="tgl" data-val="QUA" onclick="setPlateTech('QUA')">QUA</button>
-          <button class="tgl" data-val=""    onclick="setPlateTech('')">—</button>
+          <button class="tgl" data-val="CRS"  onclick="setPlateTech('CRS')">CRS</button>
+          <button class="tgl" data-val="QUA"  onclick="setPlateTech('QUA')">QUA</button>
+          <button class="tgl" data-val="ESXR" onclick="setPlateTech('ESXR')">ESXR</button>
+          <button class="tgl" data-val=""     onclick="setPlateTech('')">—</button>
         </div>
+        <input id="f-plate-num" type="text" placeholder="#" title="Plate/spec number"
+               style="width:52px;border:1px solid var(--border);border-radius:3px;padding:3px 5px;font-size:12px;font-family:var(--mono);"
+               oninput="job.esxr_number=this.value;updateHeading();pushJob()">
         <div class="toggle-group" id="press-sys-group">
           <button class="tgl" data-val="XPS" onclick="setPressSystem('XPS')">XPS</button>
           <button class="tgl" data-val="ITP" onclick="setPressSystem('ITP')">ITP</button>
           <button class="tgl" data-val=""    onclick="setPressSystem('')">—</button>
         </div>
       </div>
-    </div>
-
-    <div id="fr-esxr" class="field-row" style="display:none">
-      <label>ESXR #</label>
-      <input id="f-esxr" type="text" oninput="job.esxr_number=this.value;updateHeading()">
     </div>
 
     <div id="fr-print-type" class="field-row">
@@ -736,7 +909,10 @@ body {
     <div class="field-row inline">
       <div id="fr-date" class="field-row">
         <label>Date</label>
-        <input id="f-date" type="text" placeholder="dd/mm/yy" oninput="job.date=this.value">
+        <div style="display:flex;gap:4px;">
+          <input id="f-date" type="text" placeholder="dd-mm-yyyy" oninput="job.date=this.value;pushJob()" style="flex:1;min-width:0;">
+          <button class="today-btn" onclick="fillToday()" title="Use today's date">Today</button>
+        </div>
       </div>
       <div id="fr-set-number" class="field-row">
         <label>Set #</label>
@@ -778,6 +954,15 @@ body {
     <div class="tab-bar" id="lpi-tab-bar"></div>
     <div id="grid-area"></div>
   </div>
+
+  <!-- Compare panel (hidden until a compare file is loaded) -->
+  <aside id="compare-panel" hidden>
+    <div id="compare-header">
+      <span id="compare-title">Comparison</span>
+      <button onclick="closeCompare()" title="Close comparison">&#x2715;</button>
+    </div>
+    <div id="compare-body"></div>
+  </aside>
 </div>
 
 <!-- Datalists for shape/LPI pickers (populated by JS) -->
@@ -792,6 +977,18 @@ body {
       <button onclick="closeSettings()" title="Close">&#x2715;</button>
     </div>
     <div id="modal-body">
+
+      <!-- ── Job Presets ─────────────────────────────────────────────── -->
+      <div class="settings-section-title">Job Presets</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Presets control which fields are visible in the left panel.</p>
+      <div id="job-presets-list"></div>
+      <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input id="new-job-preset-name" type="text" placeholder="Preset name"
+               style="width:140px;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;">
+        <button onclick="addJobPreset()" class="s-add-btn">+ Add Preset</button>
+      </div>
+
+      <!-- ── Step Presets ────────────────────────────────────────────── -->
       <div class="settings-section-title">Step Presets</div>
       <div id="step-presets-list"></div>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
@@ -799,7 +996,29 @@ body {
           <input id="new-preset-name" type="text" placeholder="Name" style="width:110px;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;">
           <input id="new-preset-steps" type="text" placeholder="100,75,50,25,10,2" style="flex:1;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;font-family:var(--mono);">
         </div>
-        <button onclick="addStepPreset()" style="align-self:flex-start;padding:4px 10px;font-size:12px;border:1px solid var(--border);border-radius:3px;background:var(--btn-bg);cursor:pointer;">+ Add Preset</button>
+        <button onclick="addStepPreset()" class="s-add-btn">+ Add Preset</button>
+      </div>
+
+      <!-- ── Dot Types ───────────────────────────────────────────────── -->
+      <div class="settings-section-title">Dot Types</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Options shown in the shape type picker.</p>
+      <div id="dot-types-settings-list"></div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <input id="new-dot-type" type="text" placeholder="e.g. SQUA"
+               style="width:110px;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;font-family:var(--mono);"
+               onkeydown="if(event.key==='Enter')addDotTypeSetting()">
+        <button onclick="addDotTypeSetting()" class="s-add-btn">+ Add</button>
+      </div>
+
+      <!-- ── LPI Values ──────────────────────────────────────────────── -->
+      <div class="settings-section-title">LPI Values</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Options shown in the LPI picker.</p>
+      <div id="lpi-values-settings-list"></div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <input id="new-lpi-value" type="text" placeholder="e.g. 175#"
+               style="width:110px;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-size:12px;font-family:var(--mono);"
+               onkeydown="if(event.key==='Enter')addLpiValueSetting()">
+        <button onclick="addLpiValueSetting()" class="s-add-btn">+ Add</button>
       </div>
 
       <div class="settings-section-title">Companion — Illustrator / PDF</div>
@@ -1052,13 +1271,23 @@ function populateMetadata() {
   setV('f-customer',   job.customer);
   setV('f-job-name',   job.job_name);
   setV('f-job-number', job.job_number);
-  setV('f-esxr',       job.esxr_number);
+  setV('f-plate-num',  job.esxr_number);
   setV('f-date',       job.date);
   setV('f-set-number', job.set_number);
   syncToggle('plate-tech-group',  job.plate_tech);
   syncToggle('press-sys-group',   job.press_system);
   syncToggle('print-type-group',  job.print_type);
   updateHeading();
+}
+
+function fillToday() {
+  const d  = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  job.date = `${dd}-${mm}-${yyyy}`;
+  setV('f-date', job.date);
+  pushJob();
 }
 
 function setV(id, val) {
@@ -1220,6 +1449,245 @@ function deleteStepPreset(i) {
   renderStepPresetsList();
   buildStepPresetDropdown();
   buildPresetMenu();
+}
+
+// ── Settings — Job Presets ────────────────────────────────────────────────
+const JOB_PRESET_FIELDS = [
+  { key: 'job_name',     label: 'Job Name' },
+  { key: 'job_number',   label: 'Job #' },
+  { key: 'customer',     label: 'Customer' },
+  { key: 'plate_tech',   label: 'Plate Tech' },
+  { key: 'press_system', label: 'Press System' },
+  { key: 'esxr_number',  label: 'Plate #' },
+  { key: 'print_type',   label: 'Print Type' },
+  { key: 'date',         label: 'Date' },
+  { key: 'set_number',   label: 'Set #' },
+  { key: 'inks',         label: 'Inks' },
+  { key: 'lpis',         label: 'LPIs' },
+  { key: 'steps',        label: 'Steps' },
+];
+
+function renderJobPresets() {
+  const list = document.getElementById('job-presets-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const presets = settings.job_presets || [];
+  if (!presets.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:11px;font-style:italic;padding:4px 0;">No presets yet.</p>';
+    return;
+  }
+  for (let i = 0; i < presets.length; i++) {
+    const p = presets[i];
+    const row = document.createElement('div');
+    row.className = 's-preset-row';
+
+    const nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-weight:500;font-size:12px;min-width:120px;flex-shrink:0;';
+    nameEl.textContent = p.name;
+
+    const fields = p.fields || {};
+    const chips = JOB_PRESET_FIELDS
+      .filter(f => fields[f.key] !== false)
+      .map(f => `<span class="s-field-chip">${f.label}</span>`)
+      .join('');
+    const chipsEl = document.createElement('span');
+    chipsEl.style.cssText = 'flex:1;display:flex;flex-wrap:wrap;gap:3px;';
+    chipsEl.innerHTML = chips;
+
+    const applyBtn = document.createElement('button');
+    applyBtn.textContent = 'Load';
+    applyBtn.className = 's-add-btn';
+    applyBtn.onclick = () => loadJobPreset(i);
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✎';
+    editBtn.title = 'Edit visibility';
+    editBtn.style.cssText = 'background:none;border:1px solid var(--border);border-radius:3px;padding:2px 7px;cursor:pointer;font-size:12px;';
+    editBtn.onclick = () => editJobPreset(i);
+
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = '&#x2715;';
+    delBtn.title = 'Delete';
+    delBtn.style.cssText = 'background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;padding:0 3px;';
+    delBtn.onclick = () => deleteJobPreset(i);
+
+    row.append(nameEl, chipsEl, applyBtn, editBtn, delBtn);
+    list.appendChild(row);
+  }
+}
+
+function addJobPreset() {
+  const inp = document.getElementById('new-job-preset-name');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  if ((settings.job_presets || []).some(p => p.name === name)) {
+    showToast(`"${name}" already exists`, true); return;
+  }
+  if (!settings.job_presets) settings.job_presets = [];
+  // Default: all fields visible
+  const fields = {};
+  JOB_PRESET_FIELDS.forEach(f => { fields[f.key] = true; });
+  settings.job_presets.push({ name, fields });
+  inp.value = '';
+  renderJobPresets();
+  showToast(`Job preset "${name}" added — click ✎ to configure`);
+}
+
+function editJobPreset(i) {
+  const p = settings.job_presets[i];
+  // Build an inline editor replacing the row
+  const list = document.getElementById('job-presets-list');
+  // Simple approach: render a dialog-like expansion
+  const fields = p.fields || {};
+  const checks = JOB_PRESET_FIELDS.map(f => {
+    const checked = fields[f.key] !== false ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+      <input type="checkbox" ${checked} data-field="${f.key}" style="width:13px;height:13px;">
+      ${f.label}</label>`;
+  }).join('');
+  const editor = document.createElement('div');
+  editor.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin:4px 0;';
+  editor.innerHTML = `
+    <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Edit: ${esc(p.name)}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-bottom:10px;">${checks}</div>
+    <div style="display:flex;gap:6px;">
+      <button onclick="saveJobPresetEdit(${i},this)" class="s-add-btn">Save</button>
+      <button onclick="renderJobPresets()" style="border:1px solid var(--border);border-radius:3px;padding:3px 10px;background:var(--btn-bg);cursor:pointer;font-size:12px;">Cancel</button>
+    </div>`;
+  list.innerHTML = '';
+  list.appendChild(editor);
+}
+
+function saveJobPresetEdit(i, btn) {
+  const editor = btn.closest('div[style]');
+  const fields = {};
+  for (const cb of editor.querySelectorAll('input[type=checkbox]')) {
+    fields[cb.dataset.field] = cb.checked;
+  }
+  settings.job_presets[i].fields = fields;
+  renderJobPresets();
+  showToast('Preset updated');
+}
+
+function deleteJobPreset(i) {
+  if (!confirm(`Delete preset "${settings.job_presets[i].name}"?`)) return;
+  settings.job_presets.splice(i, 1);
+  renderJobPresets();
+}
+
+function loadJobPreset(i) {
+  const p = settings.job_presets[i];
+  const fields = p.fields || {};
+  // Show/hide left-panel field rows based on visibility
+  const visMap = {
+    job_name:     'fr-job-name',
+    job_number:   'fr-job-number',
+    customer:     'fr-customer',
+    plate_tech:   'fr-plate-press',
+    press_system: 'fr-plate-press',  // same row
+    esxr_number:  'fr-plate-press',  // same row
+    print_type:   'fr-print-type',
+    date:         'fr-date',
+    set_number:   'fr-set-number',
+    inks:         'fr-inks',
+    lpis:         'fr-lpis',
+    steps:        'fr-steps',
+  };
+  // Plate/press row: show if any of plate_tech, press_system, esxr_number are visible
+  const showPlateRow = fields.plate_tech !== false || fields.press_system !== false || fields.esxr_number !== false;
+  const visited = new Set();
+  for (const { key } of JOB_PRESET_FIELDS) {
+    const rowId = visMap[key];
+    if (!rowId || visited.has(rowId)) continue;
+    visited.add(rowId);
+    const el = document.getElementById(rowId);
+    if (!el) continue;
+    if (rowId === 'fr-plate-press') {
+      el.style.display = showPlateRow ? '' : 'none';
+    } else {
+      el.style.display = fields[key] !== false ? '' : 'none';
+    }
+  }
+  closeSettings();
+  showToast(`Preset "${p.name}" loaded`);
+}
+
+// ── Settings — Dot Types ──────────────────────────────────────────────────
+function renderDotTypesList() {
+  const list = document.getElementById('dot-types-settings-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const types = settings.dot_types || [];
+  if (!types.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:11px;font-style:italic;padding:4px 0;">No dot types.</p>';
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;padding:4px 0;';
+  types.forEach((t, i) => {
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--chip-bg);color:var(--chip-text);border:1px solid var(--chip-border);border-radius:10px;padding:2px 10px 2px 10px;font-size:12px;font-family:var(--mono);';
+    chip.innerHTML = `${esc(t)} <span onclick="deleteDotTypeSetting(${i})" style="cursor:pointer;opacity:.5;font-size:13px;padding:0 1px;" title="Remove">✕</span>`;
+    wrap.appendChild(chip);
+  });
+  list.appendChild(wrap);
+}
+
+function addDotTypeSetting() {
+  const inp = document.getElementById('new-dot-type');
+  const val = inp.value.trim().toUpperCase();
+  if (!val) { inp.focus(); return; }
+  if (!settings.dot_types) settings.dot_types = [];
+  if (settings.dot_types.includes(val)) { showToast(`"${val}" already exists`, true); return; }
+  settings.dot_types.push(val);
+  inp.value = '';
+  renderDotTypesList();
+  updateDotTypeDatalist();
+}
+
+function deleteDotTypeSetting(i) {
+  settings.dot_types.splice(i, 1);
+  renderDotTypesList();
+  updateDotTypeDatalist();
+}
+
+// ── Settings — LPI Values ─────────────────────────────────────────────────
+function renderLpiValuesList() {
+  const list = document.getElementById('lpi-values-settings-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const vals = settings.lpi_values || [];
+  if (!vals.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:11px;font-style:italic;padding:4px 0;">No LPI values.</p>';
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;padding:4px 0;';
+  vals.forEach((v, i) => {
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--chip-bg);color:var(--chip-text);border:1px solid var(--chip-border);border-radius:10px;padding:2px 10px;font-size:12px;font-family:var(--mono);';
+    chip.innerHTML = `${esc(v)} <span onclick="deleteLpiValueSetting(${i})" style="cursor:pointer;opacity:.5;font-size:13px;padding:0 1px;" title="Remove">✕</span>`;
+    wrap.appendChild(chip);
+  });
+  list.appendChild(wrap);
+}
+
+function addLpiValueSetting() {
+  const inp = document.getElementById('new-lpi-value');
+  const val = inp.value.trim();
+  if (!val) { inp.focus(); return; }
+  if (!settings.lpi_values) settings.lpi_values = [];
+  if (settings.lpi_values.includes(val)) { showToast(`"${val}" already exists`, true); return; }
+  settings.lpi_values.push(val);
+  inp.value = '';
+  renderLpiValuesList();
+  updateLpiDatalist();
+}
+
+function deleteLpiValueSetting(i) {
+  settings.lpi_values.splice(i, 1);
+  renderLpiValuesList();
+  updateLpiDatalist();
 }
 
 // ── Shape tabs ────────────────────────────────────────────────────────────
@@ -1502,6 +1970,7 @@ function removeLpi(i) {
 
 // ── Grid ──────────────────────────────────────────────────────────────────
 function renderGrid() {
+  if (compareJob) renderCompare();
   const area = document.getElementById('grid-area');
 
   if (!job.shapes.length) {
@@ -1823,7 +2292,10 @@ function openSettings() {
   document.getElementById('s-illustrator-path').value  = settings.illustrator_path || '';
   document.getElementById('s-ai-template').value       = settings.ai_template || '';
   document.getElementById('s-ai-template-ext').value   = settings.ai_template_extended || '';
+  renderJobPresets();
   renderStepPresetsList();
+  renderDotTypesList();
+  renderLpiValuesList();
   if (companionAvailable) fetchCompanionSettings();
   document.getElementById('modal-overlay').hidden = false;
 }
@@ -1842,6 +2314,7 @@ async function saveSettings() {
   settings.illustrator_path     = document.getElementById('s-illustrator-path').value;
   settings.ai_template          = document.getElementById('s-ai-template').value;
   settings.ai_template_extended = document.getElementById('s-ai-template-ext').value;
+  // dot_types and lpi_values are already mutated in place by add/delete functions
 
   try {
     await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)});
@@ -1867,6 +2340,255 @@ async function saveSettings() {
 
 function closeSettings() {
   document.getElementById('modal-overlay').hidden = true;
+}
+
+// ── Job Comparison ────────────────────────────────────────────────────────
+let compareJob = null;
+
+const CMP_META_FIELDS = [
+  { key: 'customer',     label: 'Customer' },
+  { key: 'job_name',     label: 'Job Name' },
+  { key: 'job_number',   label: 'Job #' },
+  { key: 'plate_tech',   label: 'Plate' },
+  { key: 'esxr_number',  label: 'Plate #' },
+  { key: 'press_system', label: 'Press' },
+  { key: 'print_type',   label: 'Print Type' },
+  { key: 'date',         label: 'Date' },
+  { key: 'set_number',   label: 'Set #' },
+];
+
+function loadCompareFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      compareJob = JSON.parse(e.target.result);
+      renderCompare();
+      document.getElementById('compare-panel').hidden = false;
+      document.getElementById('compare-btn').classList.add('active');
+      showToast('Compare loaded: ' + (compareJob.job_number || compareJob.job_name || file.name));
+    } catch (err) {
+      showToast('Failed to parse compare file: ' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function closeCompare() {
+  compareJob = null;
+  document.getElementById('compare-panel').hidden = true;
+  document.getElementById('compare-btn').classList.remove('active');
+}
+
+function renderCompare() {
+  if (!compareJob) return;
+  const body = document.getElementById('compare-body');
+  body.innerHTML = '';
+
+  const jobLabel = job.job_number || job.job_name || 'Current';
+  const cmpLabel = compareJob.job_number || compareJob.job_name || 'Compare';
+
+  // ── Legend ────────────────────────────────────────────────────────────
+  const legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;font-size:11px;';
+  legend.innerHTML = `
+    <span style="background:#dbeafe;color:#1e40af;border-radius:3px;padding:1px 7px;font-weight:600;">A: ${esc(jobLabel)}</span>
+    <span style="background:#dcfce7;color:#166534;border-radius:3px;padding:1px 7px;font-weight:600;">B: ${esc(cmpLabel)}</span>
+    <span style="font-size:10px;color:var(--text-muted);align-self:center;">Click a value to adopt it</span>`;
+  body.appendChild(legend);
+
+  // ── Metadata diff ─────────────────────────────────────────────────────
+  const metaSection = document.createElement('div');
+  metaSection.className = 'cmp-section';
+  metaSection.textContent = 'Metadata';
+  body.appendChild(metaSection);
+
+  for (const { key, label } of CMP_META_FIELDS) {
+    const aVal = (job[key] || '').toString();
+    const bVal = (compareJob[key] || '').toString();
+    const row = document.createElement('div');
+    row.className = 'cmp-row';
+    const lbl = document.createElement('div');
+    lbl.className = 'cmp-label';
+    lbl.textContent = label;
+    row.appendChild(lbl);
+    const vals = document.createElement('div');
+    vals.className = 'cmp-vals';
+
+    if (aVal === bVal) {
+      const same = document.createElement('div');
+      same.className = 'cmp-val-same';
+      same.textContent = aVal || '—';
+      vals.appendChild(same);
+    } else {
+      const aEl = document.createElement('div');
+      aEl.className = 'cmp-val-a';
+      aEl.title = 'Click to keep A value';
+      aEl.innerHTML = `<span class="cmp-val-tag">A</span><span>${esc(aVal || '—')}</span>`;
+      aEl.onclick = () => { /* A is already current — no action needed */ showToast(`Keeping current: ${label} = "${aVal}"`); };
+
+      const bEl = document.createElement('div');
+      bEl.className = 'cmp-val-b';
+      bEl.title = 'Click to adopt B value';
+      bEl.innerHTML = `<span class="cmp-val-tag">B</span><span>${esc(bVal || '—')}</span>`;
+      bEl.onclick = () => adoptCompareValue(key, bVal, label, aEl, bEl);
+
+      vals.append(aEl, bEl);
+    }
+    row.appendChild(vals);
+    body.appendChild(row);
+  }
+
+  // ── Ink config diff ───────────────────────────────────────────────────
+  const inkSection = document.createElement('div');
+  inkSection.className = 'cmp-section';
+  inkSection.textContent = 'Inks';
+  body.appendChild(inkSection);
+
+  const aInks = (job.inks || []).map(i => i.name).join(', ');
+  const bInks = (compareJob.inks || []).map(i => i.name).join(', ');
+  const inkRow = document.createElement('div');
+  inkRow.className = 'cmp-row';
+  inkRow.innerHTML = `<div class="cmp-label">Channels</div>`;
+  const inkVals = document.createElement('div');
+  inkVals.className = 'cmp-vals';
+  if (aInks === bInks) {
+    inkVals.innerHTML = `<div class="cmp-val-same">${esc(aInks)}</div>`;
+  } else {
+    inkVals.innerHTML = `
+      <div class="cmp-val-a"><span class="cmp-val-tag">A</span><span>${esc(aInks)}</span></div>
+      <div class="cmp-val-b"><span class="cmp-val-tag">B</span><span>${esc(bInks)}</span></div>`;
+  }
+  inkRow.appendChild(inkVals);
+  body.appendChild(inkRow);
+
+  // ── Grid delta per matching shape/LPI ────────────────────────────────
+  const gridSection = document.createElement('div');
+  gridSection.className = 'cmp-section';
+  gridSection.textContent = 'Grid Delta (B − A)';
+  body.appendChild(gridSection);
+
+  const aShape = job.shapes[activeShapeIdx];
+  const aName  = aShape ? shapeDisplayName(aShape) : null;
+  // Find matching shape in compareJob by display name
+  const bShape = aName
+    ? (compareJob.shapes || []).find(s => shapeDisplayName(s) === aName)
+    : (compareJob.shapes || [])[0];
+
+  if (!aShape || !bShape) {
+    const note = document.createElement('p');
+    note.style.cssText = 'color:var(--text-muted);font-size:11px;font-style:italic;';
+    note.textContent = aShape ? `No matching shape "${aName}" in B.` : 'No shapes in current job.';
+    body.appendChild(note);
+    return;
+  }
+
+  const ali    = activeLpiIdx[activeShapeIdx] || 0;
+  const aLpi   = aShape.weights[ali];
+  const aLpiLabel = aLpi ? aLpi.lpi || aLpi.label || '' : '';
+  const bLpi   = bShape.weights.find(w => (w.lpi || w.label) === aLpiLabel) || bShape.weights[ali];
+
+  if (!aLpi || !bLpi) {
+    body.appendChild(Object.assign(document.createElement('p'), {
+      style: 'color:var(--text-muted);font-size:11px;font-style:italic;',
+      textContent: 'No matching LPI data.'
+    }));
+    return;
+  }
+
+  const inks  = job.inks || [];
+  const nInks = inks.length;
+  const steps = job.step_labels || [];
+
+  const table = document.createElement('table');
+  table.className = 'cmp-grid-table';
+
+  // Header
+  const thead = table.createTHead();
+  const hr = thead.insertRow();
+  hr.insertCell().textContent = '';
+  for (const ink of inks) {
+    const th = document.createElement('th');
+    th.textContent = ink.name;
+    hr.appendChild(th);
+  }
+
+  const tbody = table.createTBody();
+
+  // Density delta row
+  const dr = tbody.insertRow();
+  dr.insertCell().textContent = 'D';
+  for (let ci = 0; ci < nInks; ci++) {
+    const a = (aLpi.density || [])[ci] || 0;
+    const b = (bLpi.density || [])[ci] || 0;
+    const td = dr.insertCell();
+    renderDeltaCell(td, b - a, 0.05);
+  }
+
+  // Step rows
+  for (let si = 0; si < steps.length; si++) {
+    const label = steps[si];
+    const tr = tbody.insertRow();
+    tr.insertCell().textContent = label;
+    const aRow = (aLpi.steps || [])[si] || [];
+    const bRow = (bLpi.steps || [])[si] || [];
+    for (let ci = 0; ci < nInks; ci++) {
+      const a = aRow[ci] || 0;
+      const b = bRow[ci] || 0;
+      const td = tr.insertCell();
+      if (label === '100') { td.textContent = '0'; td.className = 'cmp-delta-zero'; }
+      else renderDeltaCell(td, b - a, 0.05);
+    }
+  }
+
+  body.appendChild(table);
+
+  // LPI label note
+  const note = document.createElement('p');
+  note.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:4px;';
+  note.textContent = `Shape: ${aName} / LPI: ${aLpiLabel || ali}`;
+  body.appendChild(note);
+}
+
+function renderDeltaCell(td, delta, tolerance) {
+  const abs = Math.abs(delta);
+  if (abs < tolerance) {
+    td.textContent = '0';
+    td.className = 'cmp-delta-zero';
+  } else {
+    td.textContent = (delta > 0 ? '+' : '') + delta.toFixed(1);
+    td.className = abs <= 1.5 ? 'cmp-delta-good' : abs <= 3.0 ? 'cmp-delta-ok' : 'cmp-delta-bad';
+  }
+}
+
+function adoptCompareValue(key, val, label, aEl, bEl) {
+  job[key] = val;
+  // Update UI field if it exists
+  const fieldMap = {
+    customer: 'f-customer', job_name: 'f-job-name', job_number: 'f-job-number',
+    esxr_number: 'f-plate-num', date: 'f-date', set_number: 'f-set-number',
+    plate_tech: null, press_system: null, print_type: null,
+  };
+  const fieldId = fieldMap[key];
+  if (fieldId) {
+    setV(fieldId, val);
+  } else if (key === 'plate_tech') {
+    syncToggle('plate-tech-group', val);
+  } else if (key === 'press_system') {
+    syncToggle('press-sys-group', val);
+  } else if (key === 'print_type') {
+    syncToggle('print-type-group', val);
+  }
+  updateHeading();
+  pushJob();
+  // Visually mark as adopted: swap colours
+  aEl.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:11.5px;border-radius:3px;padding:1px 4px;background:#dcfce7;color:#166534;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  aEl.querySelector('.cmp-val-tag').textContent = '✓';
+  aEl.querySelector('span:last-child').textContent = val || '—';
+  bEl.style.opacity = '.4';
+  showToast(`${label} → "${val}"`);
 }
 
 // ── Render all ────────────────────────────────────────────────────────────
