@@ -14,6 +14,7 @@ use crate::core::models::{default_inks, Ink, InkKind, JobConfig, ShapeData, Weig
 // ── Save ──────────────────────────────────────────────────────────────────────
 
 /// Write a session to disk atomically (temp → backup → rename).
+#[allow(dead_code)] // used in tests; desktop save will call this when re-enabled
 pub fn save_session(job: &JobConfig, path: &Path) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)

@@ -191,6 +191,7 @@ impl Default for Settings {
     }
 }
 
+#[allow(dead_code)] // preset lookup helpers — used by future UI wiring
 impl Settings {
     pub fn find_step_preset(&self, name: &str) -> Option<&StepPreset> {
         self.step_presets.iter().find(|p| p.name == name)
