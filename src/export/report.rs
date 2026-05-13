@@ -642,83 +642,153 @@ tr.row-density td.td-target { background: #e8edfa !important; }
 tr:nth-child(even):not(.row-density) td.td-data { background: #fafafa; }
 tr:nth-child(even):not(.row-density) td.td-avg  { background: #f0fdf4; }
 
-/* ── Comparison report ── */
-.cmp-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 12pt; }
-.cmp-table th { background: #0f172a; color: #94a3b8; font-size: 7.5pt; text-transform: uppercase;
-  letter-spacing: 0.5px; padding: 4pt 6pt; text-align: left; border: 0.5pt solid #334155; }
-.cmp-table th.cmp-job { color: #e2e8f0; font-size: 8pt; }
-.cmp-table td { padding: 3pt 6pt; border: 0.5pt solid #e2e8f0; vertical-align: top; color: #1e293b; }
-.cmp-table td.cmp-field { background: #f8fafc; color: #475569; font-weight: 600;
-  font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-.cmp-table tr:nth-child(even) td:not(.cmp-field) { background: #fafafa; }
-.cmp-title { font-size: 13pt; font-weight: 700; color: #0f172a; margin: 0 0 4pt 0; }
-.cmp-subtitle { font-size: 8pt; color: #64748b; margin: 0 0 10pt 0; }
+/* ── Combined report ── */
+.shared-banner { opacity: .85; }
+.job-section + .job-section { margin-top: 0; }
 "#;
 
-// ── Comparison report ─────────────────────────────────────────────────────────
+// ── Combined multi-job report ─────────────────────────────────────────────────
 
-/// Generate a print-ready A4 HTML page summarising multiple jobs side-by-side.
-/// No delta/diff logic — just a metadata + shape summary table with one column per job.
+/// Generate a single print-ready HTML document containing the full report for
+/// every job — header + all step tables — identical in appearance to the
+/// single-job report.  Fields that are identical across all jobs are shown
+/// once in a shared banner at the top; unique fields appear in each job's
+/// own header.  Jobs are separated by a CSS page-break so the browser's
+/// print-to-PDF produces one tidy document.
 pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
     if jobs.is_empty() {
-        return "<html><body><p>No jobs to compare.</p></body></html>".to_string();
+        return "<html><body><p>No jobs provided.</p></body></html>".to_string();
     }
 
-    let num_jobs = jobs.len();
-    let _now_str = jobs.first().map(|j| j.date.clone()).unwrap_or_default();
-    let subtitle = format!("{} job{}", num_jobs, if num_jobs == 1 { "" } else { "s" });
+    // ── Identify shared vs unique fields ──────────────────────────────────────
+    let shared_customer     = all_same(jobs, |j| &j.customer);
+    let shared_plate_tech   = all_same(jobs, |j| &j.plate_tech);
+    let shared_esxr         = all_same(jobs, |j| &j.esxr_number);
+    let shared_press        = all_same(jobs, |j| &j.press_system);
+    let shared_print_type   = all_same(jobs, |j| &j.print_type);
 
-    // ── Header row (job index labels) ─────────────────────────────────────────
-    let col_headers: String = jobs.iter().enumerate()
-        .map(|(i, j)| {
-            let label = if !j.job_name.is_empty() { j.job_name.clone() }
-                        else { format!("Job {}", i + 1) };
-            format!(r#"<th class="cmp-job">{}</th>"#, esc(&label))
-        })
+    // ── Shared banner (only fields identical across all jobs) ─────────────────
+    let shared_banner = {
+        let first = jobs[0];
+
+        let customer = if shared_customer && !first.customer.is_empty() {
+            format!(r#"<div class="customer">{}</div>"#, esc(&first.customer))
+        } else { String::new() };
+
+        let spec_tags: String = [
+            if shared_plate_tech { first.plate_tech.as_str() } else { "" },
+            if shared_esxr       { first.esxr_number.as_str() } else { "" },
+            if shared_press      { first.press_system.as_str() } else { "" },
+            if shared_print_type { first.print_type.as_str() } else { "" },
+        ]
+        .iter()
+        .filter(|s| !s.is_empty())
+        .map(|s| format!(r#"<span class="spec-tag">{}</span>"#, esc(s)))
+        .collect::<Vec<_>>()
+        .join(" ");
+
+        let specs = if !spec_tags.is_empty() {
+            format!(r#"<div class="spec-line">{spec_tags}</div>"#)
+        } else { String::new() };
+
+        if customer.is_empty() && specs.is_empty() {
+            String::new()
+        } else {
+            format!(
+                r#"<header class="report-header shared-banner">
+<div class="accent-bar"></div>
+<div class="header-inner">
+  <div class="header-left">{customer}{specs}</div>
+  <div class="header-right"><div class="detail-item"><span class="detail-label">JOBS</span><span class="detail-value">{n}</span></div></div>
+</div>
+</header>"#,
+                customer = customer,
+                specs    = specs,
+                n        = jobs.len(),
+            )
+        }
+    };
+
+    // ── Per-job sections ──────────────────────────────────────────────────────
+    let job_sections: String = jobs.iter().enumerate().map(|(i, job)| {
+        // Build a per-job header showing only what differs (or always show
+        // job-specific identity: job_name, job_number, date, set_number).
+        let job_name = if !job.job_name.is_empty() {
+            format!(r#"<div class="job-name">{}</div>"#, esc(&job.job_name))
+        } else { String::new() };
+
+        // Show customer in per-job header only if it differs across jobs.
+        let customer = if !shared_customer && !job.customer.is_empty() {
+            format!(r#"<div class="customer">{}</div>"#, esc(&job.customer))
+        } else { String::new() };
+
+        let spec_tags: String = [
+            if !shared_plate_tech { job.plate_tech.as_str() } else { "" },
+            if !shared_esxr       { job.esxr_number.as_str() } else { "" },
+            if !shared_press      { job.press_system.as_str() } else { "" },
+            if !shared_print_type { job.print_type.as_str() } else { "" },
+        ]
+        .iter()
+        .filter(|s| !s.is_empty())
+        .map(|s| format!(r#"<span class="spec-tag">{}</span>"#, esc(s)))
+        .collect::<Vec<_>>()
+        .join(" ");
+
+        let specs = if !spec_tags.is_empty() {
+            format!(r#"<div class="spec-line">{spec_tags}</div>"#)
+        } else { String::new() };
+
+        let right_items: String = [
+            ("JOB",  job.job_number.as_str()),
+            ("DATE", job.date.as_str()),
+            ("SET",  job.set_number.as_str()),
+        ]
+        .iter()
+        .filter(|(_, v)| !v.is_empty())
+        .map(|(lbl, val)| format!(
+            r#"<div class="detail-item"><span class="detail-label">{lbl}</span><span class="detail-value">{val}</span></div>"#,
+            val = esc(val),
+        ))
         .collect();
 
-    // ── Metadata rows ─────────────────────────────────────────────────────────
-    let rows = [
-        ("Customer",    jobs.iter().map(|j| j.customer.clone()).collect::<Vec<_>>()),
-        ("Job Name",    jobs.iter().map(|j| j.job_name.clone()).collect()),
-        ("Job #",       jobs.iter().map(|j| j.job_number.clone()).collect()),
-        ("Date",        jobs.iter().map(|j| j.date.clone()).collect()),
-        ("Set #",       jobs.iter().map(|j| j.set_number.clone()).collect()),
-        ("Plate",       jobs.iter().map(|j| {
-            let mut s = j.plate_tech.clone();
-            if !j.esxr_number.is_empty() { s.push(' '); s.push_str(&j.esxr_number); }
-            s
-        }).collect()),
-        ("Press",       jobs.iter().map(|j| j.press_system.clone()).collect()),
-        ("Print Type",  jobs.iter().map(|j| j.print_type.clone()).collect()),
-        ("Inks",        jobs.iter().map(|j| {
-            j.inks.iter().map(|ink| ink.name.as_str()).collect::<Vec<_>>().join(", ")
-        }).collect()),
-        ("Shapes / LPI", jobs.iter().map(|j| {
-            j.shapes.iter().map(|s| {
-                let lpis: Vec<&str> = s.weights.iter().map(|w| w.lpi.as_str()).collect();
-                if lpis.is_empty() {
-                    s.display_name()
-                } else {
-                    format!("{}: {}", s.display_name(), lpis.join(", "))
-                }
-            }).collect::<Vec<_>>().join(" | ")
-        }).collect()),
-    ];
+        let right = if right_items.is_empty() { String::new() } else {
+            format!(r#"<div class="header-right">{right_items}</div>"#)
+        };
 
-    let table_rows: String = rows.iter().map(|(field, values)| {
-        let cells: String = values.iter()
-            .map(|v| format!(r#"<td>{}</td>"#, esc(v)))
-            .collect();
-        format!(r#"<tr><td class="cmp-field">{field}</td>{cells}</tr>"#)
+        let page_break = if i > 0 { r#" style="page-break-before:always""# } else { "" };
+
+        format!(
+            r#"<div class="job-section"{page_break}>
+<header class="report-header">
+<div class="accent-bar"></div>
+<div class="header-inner">
+  <div class="header-left">{customer}{job_name}{specs}</div>
+  {right}
+</div>
+</header>
+{body}
+</div>"#,
+            page_break = page_break,
+            customer   = customer,
+            job_name   = job_name,
+            specs      = specs,
+            right      = right,
+            body       = build_body(job),
+        )
     }).collect();
+
+    let title = if jobs.len() == 1 {
+        jobs[0].heading()
+    } else {
+        format!("Combined Report ({} jobs)", jobs.len())
+    };
 
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Job Comparison</title>
+<title>{title}</title>
 <style>{css}</style>
 </head>
 <body>
@@ -726,23 +796,27 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
   <button onclick="window.print()">Print / Save PDF</button>
   <button onclick="window.close()">Close</button>
 </div>
-<div style="padding: 16pt 20pt;">
-  <p class="cmp-title">Job Comparison</p>
-  <p class="cmp-subtitle">{subtitle}</p>
-  <table class="cmp-table">
-    <thead>
-      <tr><th>Field</th>{col_headers}</tr>
-    </thead>
-    <tbody>
-      {table_rows}
-    </tbody>
-  </table>
-</div>
+{shared_banner}
+{job_sections}
 </body>
 </html>"#,
-        css         = CSS,
-        subtitle    = esc(&subtitle),
-        col_headers = col_headers,
-        table_rows  = table_rows,
+        title          = esc(&title),
+        css            = CSS,
+        shared_banner  = shared_banner,
+        job_sections   = job_sections,
     )
+}
+
+/// Returns true if the extracted string field is non-empty and identical
+/// across every job.
+fn all_same<'a, F>(jobs: &[&'a JobConfig], f: F) -> bool
+where
+    F: Fn(&'a JobConfig) -> &'a String,
+{
+    let mut iter = jobs.iter().map(|j| f(j).as_str());
+    let first = match iter.next() {
+        Some(v) if !v.is_empty() => v,
+        _ => return false,
+    };
+    iter.all(|v| v == first)
 }
