@@ -638,6 +638,32 @@ body {
 .today-btn:hover { background: var(--btn-hover); }
 
 /* ── Compare panel ───────────────────────────────────────────────────────── */
+#compare-jobs-list {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cmp-job-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1e293b;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  color: #cbd5e1;
+  gap: 6px;
+}
+.cmp-job-chip span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-job-chip button {
+  background: none; border: none; color: #94a3b8; cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 0; flex-shrink: 0;
+}
+.cmp-job-chip button:hover { color: #f87171; }
+.cmp-job-chip.active { background: #1e3a5f; color: #93c5fd; }
 #compare-panel {
   width: 290px;
   flex-shrink: 0;
@@ -849,8 +875,8 @@ body {
   <button class="tbtn" onclick="exportSVG()">&#x25F1; SVG</button>
   <button class="tbtn" id="pdf-btn" onclick="exportPDF()" disabled title="Start companion to enable PDF export">&#x1F4C4; PDF</button>
 
-  <button class="tbtn" id="compare-btn" onclick="document.getElementById('compare-file').click()" title="Load a second session to compare">&#x21C4; Compare</button>
-  <input id="compare-file" type="file" accept=".json" hidden onchange="loadCompareFile(event)">
+  <button class="tbtn" id="compare-btn" onclick="document.getElementById('compare-file').click()" title="Load sessions to compare">&#x21C4; Compare</button>
+  <input id="compare-file" type="file" accept=".json" multiple hidden onchange="loadCompareFile(event)">
 
   <button class="tbtn" onclick="openSettings()" title="Settings">&#x2699;</button>
 </header>
@@ -959,8 +985,13 @@ body {
   <aside id="compare-panel" hidden>
     <div id="compare-header">
       <span id="compare-title">Comparison</span>
-      <button onclick="closeCompare()" title="Close comparison">&#x2715;</button>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <button onclick="document.getElementById('compare-file').click()" title="Add more jobs">&#x2B; Add</button>
+        <button onclick="exportComparison()" title="Export all jobs as a comparison report" style="color:#86efac;">&#x1F5A8;</button>
+        <button onclick="closeCompare()" title="Close comparison">&#x2715;</button>
+      </div>
     </div>
+    <div id="compare-jobs-list"></div>
     <div id="compare-body"></div>
   </aside>
 </div>
@@ -1970,7 +2001,7 @@ function removeLpi(i) {
 
 // ── Grid ──────────────────────────────────────────────────────────────────
 function renderGrid() {
-  if (compareJob) renderCompare();
+  if (compareJobs.length > 0) renderCompare();
   const area = document.getElementById('grid-area');
 
   if (!job.shapes.length) {
@@ -2343,7 +2374,8 @@ function closeSettings() {
 }
 
 // ── Job Comparison ────────────────────────────────────────────────────────
-let compareJob = null;
+let compareJobs = [];       // array of loaded JobConfig objects
+let activeCompareIdx = 0;   // which compareJob drives the diff panel
 
 const CMP_META_FIELDS = [
   { key: 'customer',     label: 'Customer' },
@@ -2358,31 +2390,90 @@ const CMP_META_FIELDS = [
 ];
 
 function loadCompareFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      compareJob = JSON.parse(e.target.result);
-      renderCompare();
-      document.getElementById('compare-panel').hidden = false;
-      document.getElementById('compare-btn').classList.add('active');
-      showToast('Compare loaded: ' + (compareJob.job_number || compareJob.job_name || file.name));
-    } catch (err) {
-      showToast('Failed to parse compare file: ' + err.message, true);
-    }
-  };
-  reader.readAsText(file);
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  let loaded = 0;
+  for (const file of files) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        compareJobs.push(parsed);
+        loaded++;
+        if (loaded === files.length) {
+          activeCompareIdx = compareJobs.length - files.length; // focus first newly added
+          renderJobsList();
+          renderCompare();
+          document.getElementById('compare-panel').hidden = false;
+          document.getElementById('compare-btn').classList.add('active');
+          showToast(`${loaded} compare job${loaded > 1 ? 's' : ''} loaded`);
+        }
+      } catch (err) {
+        showToast('Failed to parse ' + file.name + ': ' + err.message, true);
+      }
+    };
+    reader.readAsText(file);
+  }
   event.target.value = '';
 }
 
+function removeCompareJob(idx) {
+  compareJobs.splice(idx, 1);
+  if (compareJobs.length === 0) { closeCompare(); return; }
+  if (activeCompareIdx >= compareJobs.length) activeCompareIdx = compareJobs.length - 1;
+  renderJobsList();
+  renderCompare();
+}
+
+function setActiveCompareJob(idx) {
+  activeCompareIdx = idx;
+  renderJobsList();
+  renderCompare();
+}
+
+function renderJobsList() {
+  const list = document.getElementById('compare-jobs-list');
+  list.innerHTML = '';
+  compareJobs.forEach((j, i) => {
+    const label = j.job_number || j.job_name || `Job ${i + 1}`;
+    const chip = document.createElement('div');
+    chip.className = 'cmp-job-chip' + (i === activeCompareIdx ? ' active' : '');
+    chip.innerHTML = `<span title="${esc(label)}">${esc(label)}</span>
+      <button onclick="removeCompareJob(${i})" title="Remove">&#x2715;</button>`;
+    chip.querySelector('span').onclick = () => setActiveCompareJob(i);
+    list.appendChild(chip);
+  });
+}
+
 function closeCompare() {
-  compareJob = null;
+  compareJobs = [];
+  activeCompareIdx = 0;
   document.getElementById('compare-panel').hidden = true;
   document.getElementById('compare-btn').classList.remove('active');
+  document.getElementById('compare-jobs-list').innerHTML = '';
+}
+
+async function exportComparison() {
+  if (compareJobs.length === 0) { showToast('No compare jobs loaded', true); return; }
+  try {
+    const allJobs = [job, ...compareJobs];
+    const res = await fetch('/api/export/comparison', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(allJobs),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const html = await res.text();
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+  } catch (err) {
+    showToast('Export failed: ' + err.message, true);
+  }
 }
 
 function renderCompare() {
+  const compareJob = compareJobs[activeCompareIdx];
   if (!compareJob) return;
   const body = document.getElementById('compare-body');
   body.innerHTML = '';

@@ -641,4 +641,108 @@ tr.row-density td.td-target { background: #e8edfa !important; }
 /* Alternating shading */
 tr:nth-child(even):not(.row-density) td.td-data { background: #fafafa; }
 tr:nth-child(even):not(.row-density) td.td-avg  { background: #f0fdf4; }
+
+/* ── Comparison report ── */
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 12pt; }
+.cmp-table th { background: #0f172a; color: #94a3b8; font-size: 7.5pt; text-transform: uppercase;
+  letter-spacing: 0.5px; padding: 4pt 6pt; text-align: left; border: 0.5pt solid #334155; }
+.cmp-table th.cmp-job { color: #e2e8f0; font-size: 8pt; }
+.cmp-table td { padding: 3pt 6pt; border: 0.5pt solid #e2e8f0; vertical-align: top; color: #1e293b; }
+.cmp-table td.cmp-field { background: #f8fafc; color: #475569; font-weight: 600;
+  font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+.cmp-table tr:nth-child(even) td:not(.cmp-field) { background: #fafafa; }
+.cmp-title { font-size: 13pt; font-weight: 700; color: #0f172a; margin: 0 0 4pt 0; }
+.cmp-subtitle { font-size: 8pt; color: #64748b; margin: 0 0 10pt 0; }
 "#;
+
+// ── Comparison report ─────────────────────────────────────────────────────────
+
+/// Generate a print-ready A4 HTML page summarising multiple jobs side-by-side.
+/// No delta/diff logic — just a metadata + shape summary table with one column per job.
+pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
+    if jobs.is_empty() {
+        return "<html><body><p>No jobs to compare.</p></body></html>".to_string();
+    }
+
+    let num_jobs = jobs.len();
+    let _now_str = jobs.first().map(|j| j.date.clone()).unwrap_or_default();
+    let subtitle = format!("{} job{}", num_jobs, if num_jobs == 1 { "" } else { "s" });
+
+    // ── Header row (job index labels) ─────────────────────────────────────────
+    let col_headers: String = jobs.iter().enumerate()
+        .map(|(i, j)| {
+            let label = if !j.job_name.is_empty() { j.job_name.clone() }
+                        else { format!("Job {}", i + 1) };
+            format!(r#"<th class="cmp-job">{}</th>"#, esc(&label))
+        })
+        .collect();
+
+    // ── Metadata rows ─────────────────────────────────────────────────────────
+    let rows = [
+        ("Customer",    jobs.iter().map(|j| j.customer.clone()).collect::<Vec<_>>()),
+        ("Job Name",    jobs.iter().map(|j| j.job_name.clone()).collect()),
+        ("Job #",       jobs.iter().map(|j| j.job_number.clone()).collect()),
+        ("Date",        jobs.iter().map(|j| j.date.clone()).collect()),
+        ("Set #",       jobs.iter().map(|j| j.set_number.clone()).collect()),
+        ("Plate",       jobs.iter().map(|j| {
+            let mut s = j.plate_tech.clone();
+            if !j.esxr_number.is_empty() { s.push(' '); s.push_str(&j.esxr_number); }
+            s
+        }).collect()),
+        ("Press",       jobs.iter().map(|j| j.press_system.clone()).collect()),
+        ("Print Type",  jobs.iter().map(|j| j.print_type.clone()).collect()),
+        ("Inks",        jobs.iter().map(|j| {
+            j.inks.iter().map(|ink| ink.name.as_str()).collect::<Vec<_>>().join(", ")
+        }).collect()),
+        ("Shapes / LPI", jobs.iter().map(|j| {
+            j.shapes.iter().map(|s| {
+                let lpis: Vec<&str> = s.weights.iter().map(|w| w.lpi.as_str()).collect();
+                if lpis.is_empty() {
+                    s.display_name()
+                } else {
+                    format!("{}: {}", s.display_name(), lpis.join(", "))
+                }
+            }).collect::<Vec<_>>().join(" | ")
+        }).collect()),
+    ];
+
+    let table_rows: String = rows.iter().map(|(field, values)| {
+        let cells: String = values.iter()
+            .map(|v| format!(r#"<td>{}</td>"#, esc(v)))
+            .collect();
+        format!(r#"<tr><td class="cmp-field">{field}</td>{cells}</tr>"#)
+    }).collect();
+
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Job Comparison</title>
+<style>{css}</style>
+</head>
+<body>
+<div class="no-print">
+  <button onclick="window.print()">Print / Save PDF</button>
+  <button onclick="window.close()">Close</button>
+</div>
+<div style="padding: 16pt 20pt;">
+  <p class="cmp-title">Job Comparison</p>
+  <p class="cmp-subtitle">{subtitle}</p>
+  <table class="cmp-table">
+    <thead>
+      <tr><th>Field</th>{col_headers}</tr>
+    </thead>
+    <tbody>
+      {table_rows}
+    </tbody>
+  </table>
+</div>
+</body>
+</html>"#,
+        css         = CSS,
+        subtitle    = esc(&subtitle),
+        col_headers = col_headers,
+        table_rows  = table_rows,
+    )
+}
