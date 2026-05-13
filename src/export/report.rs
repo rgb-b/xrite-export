@@ -654,7 +654,7 @@ body.combined .detail-value  { font-size: 8pt; }
 body.combined .shape-section { padding: 0 12mm; margin-bottom: 3mm; }
 body.combined .shape-label   { font-size: 7.5pt; padding: 2pt 6pt; }
 body.combined .job-section   { margin-bottom: 0; }
-body.combined .job-section + .job-section { border-top: 2pt solid #1e293b; margin-top: 4mm; }
+body.combined .job-section + .job-section { margin-top: 4mm; }
 body.combined .shared-banner .header-inner { padding: 3mm 12mm; }
 body.combined .shared-banner .customer     { font-size: 14pt; margin-bottom: 2pt; }
 body.combined .shared-banner .detail-value { font-size: 9pt; }
