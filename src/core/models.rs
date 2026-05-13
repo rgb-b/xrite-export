@@ -63,20 +63,12 @@ pub struct WeightData {
 }
 
 impl WeightData {
+    #[allow(dead_code)] // used in tests
     pub fn new(lpi: impl Into<String>, num_inks: usize, num_steps: usize) -> Self {
         Self {
             lpi: lpi.into(),
             density: vec![0.0; num_inks],
             steps: vec![vec![0.0; num_inks]; num_steps],
-        }
-    }
-
-    /// Resize density and step vectors to match a new ink count.
-    /// New columns are zero-filled; excess columns are dropped.
-    pub fn resize_inks(&mut self, num_inks: usize) {
-        self.density.resize(num_inks, 0.0);
-        for row in &mut self.steps {
-            row.resize(num_inks, 0.0);
         }
     }
 
@@ -232,14 +224,6 @@ impl JobConfig {
             .collect()
     }
 
-    /// Compute the CMYK average for one step row across all deviation inks.
-    /// Returns `None` if there are no deviation inks or all values are zero.
-    pub fn step_average(&self, row_values: &[f64]) -> Option<f64> {
-        let indices = self.deviation_ink_indices();
-        if indices.is_empty() { return None; }
-        let sum: f64 = indices.iter().map(|&i| row_values.get(i).copied().unwrap_or(0.0)).sum();
-        Some(sum / indices.len() as f64)
-    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

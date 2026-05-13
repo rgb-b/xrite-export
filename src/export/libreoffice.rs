@@ -1,4 +1,5 @@
 //! LibreOffice PDF export backend — Linux substitute for Illustrator.
+#![allow(dead_code)] // planned feature — not yet wired into the web server
 //!
 //! Since there are no Rust UNO bindings, we spawn a small Python helper script
 //! that does the UNO work. Rust passes it the placeholder dict as JSON.

@@ -22,13 +22,6 @@ use crate::settings;
 /// Runner.jsx template — embedded at compile time.
 const RUNNER_JSX: &str = include_str!("../../assets/runner.jsx");
 
-/// Builder script — embedded at compile time so it can be extracted on any machine.
-const BUILDER_JSX: &str = include_str!("../../assets/build_ai_template.jsx");
-
-pub fn builder_jsx() -> &'static str {
-    BUILDER_JSX
-}
-
 /// Common Illustrator install paths to probe (Windows), newest-first.
 const ILLUSTRATOR_SEARCH_PATHS: &[&str] = &[
     r"C:\Program Files\Adobe\Adobe Illustrator 2030\Support Files\Contents\Windows\Illustrator.exe",
