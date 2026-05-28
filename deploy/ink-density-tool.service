@@ -1,0 +1,12 @@
+[Unit]
+Description=Ink Density Tool
+After=network.target
+
+[Service]
+User=el
+WorkingDirectory=/home/el/Documents/El-Projects/xrite-export
+ExecStart=/home/el/Documents/El-Projects/xrite-export/target/release/ink-density-tool --web
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
