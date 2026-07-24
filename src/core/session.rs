@@ -80,6 +80,25 @@ fn job_from_value(v: &serde_json::Value) -> JobConfig {
             .unwrap_or_else(|| defaults.iter().map(|s| s.to_string()).collect())
     };
 
+    // `plate_tech`/`plate_type` used to be single strings; accept either the
+    // new array format or an old plain string (wrapped as a one-element
+    // vec), and fall back to `old_key` for sessions saved before the field
+    // was renamed (`plate_type` used to be called `press_system`).
+    let str_or_vec = |key: &str, old_key: &str| -> Vec<String> {
+        match obj.and_then(|o| o.get(key)) {
+            Some(serde_json::Value::Array(a)) => a.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect(),
+            Some(serde_json::Value::String(s)) if !s.is_empty() => vec![s.clone()],
+            _ => match obj.and_then(|o| o.get(old_key)).and_then(|v| v.as_str()) {
+                Some(s) if !s.is_empty() => vec![s.to_string()],
+                _ => Vec::new(),
+            },
+        }
+    };
+
     // Resolve inks — support both new format (array of Ink objects) and old
     // format (colour_names string array like ["C","M","Y","K"]).
     let inks: Vec<Ink> = if let Some(arr) = obj
@@ -113,9 +132,9 @@ fn job_from_value(v: &serde_json::Value) -> JobConfig {
         job_name:     str("job_name"),
         job_number:   str("job_number"),
         customer:     str("customer"),
-        plate_tech:   str("plate_tech"),
-        press_system: str("press_system"),
-        esxr_number:  str("esxr_number"),
+        plate_tech:   str_or_vec("plate_tech", "plate_tech"),
+        plate_type:   str_or_vec("plate_type", "press_system"),
+        press:        { let p = str("press"); if !p.is_empty() { p } else { str("esxr_number") } },
         print_type:   str("print_type"),
         date:         str("date"),
         set_number:   str("set_number"),
@@ -226,10 +245,10 @@ mod tests {
 
     fn make_job() -> JobConfig {
         JobConfig {
-            customer:    "Acme".into(),
-            plate_tech:  "CRS".into(),
-            press_system:"XPS".into(),
-            print_type:  "RP".into(),
+            customer:   "Acme".into(),
+            plate_tech: vec!["CRS".into()],
+            plate_type: vec!["XPS".into()],
+            print_type: "RP".into(),
             shapes: vec![ShapeData {
                 dot_type:   "CRS".into(),
                 dot_number: "501".into(),
@@ -247,7 +266,8 @@ mod tests {
         let loaded = load_session(tmp.path()).unwrap();
 
         assert_eq!(loaded.customer,    "Acme");
-        assert_eq!(loaded.plate_tech,  "CRS");
+        assert_eq!(loaded.plate_tech,  vec!["CRS".to_string()]);
+        assert_eq!(loaded.plate_type,  vec!["XPS".to_string()]);
         assert_eq!(loaded.print_type,  "RP");
         assert_eq!(loaded.shapes[0].dot_type,   "CRS");
         assert_eq!(loaded.shapes[0].dot_number, "501");
@@ -267,6 +287,24 @@ mod tests {
         let job = job_from_value(&json);
         assert_eq!(job.inks.len(), 4);
         assert_eq!(job.inks[0].name, "C");
+    }
+
+    #[test]
+    fn old_format_plate_fields() {
+        // Sessions saved before plate_tech/plate_type became multi-select
+        // (and before press_system/esxr_number were renamed) stored plain
+        // strings under the old key names.
+        let json = serde_json::json!({
+            "customer": "OldCo",
+            "plate_tech": "CRS",
+            "press_system": "XPS",
+            "esxr_number": "ONYX 6",
+            "shapes": []
+        });
+        let job = job_from_value(&json);
+        assert_eq!(job.plate_tech, vec!["CRS".to_string()]);
+        assert_eq!(job.plate_type, vec!["XPS".to_string()]);
+        assert_eq!(job.press, "ONYX 6");
     }
 
     #[test]

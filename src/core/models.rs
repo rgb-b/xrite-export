@@ -133,17 +133,18 @@ pub struct JobConfig {
     #[serde(default)]
     pub customer: String,
 
-    /// Plate technology: "CRS" (Crystal) | "QUA" (Quartz) | ""
+    /// Plate technology (multi-select): "CRS" (Crystal) | "QUA" (Quartz)
     #[serde(default)]
-    pub plate_tech: String,
+    pub plate_tech: Vec<String>,
 
-    /// Press system: "XPS" | "ITP" | ""
+    /// Plate type (multi-select): "XPS" | "ITP" | "ESXR"
     #[serde(default)]
-    pub press_system: String,
+    pub plate_type: Vec<String>,
 
-    /// Optional screening spec number, e.g. "3245".
+    /// Press name/number, e.g. "ONYX 6". Free text — presses vary too much
+    /// shop-to-shop for a fixed option set.
     #[serde(default)]
-    pub esxr_number: String,
+    pub press: String,
 
     /// Print type: "RP" | "SP" | "CBW SP" | ""
     #[serde(default)]
@@ -182,9 +183,9 @@ impl Default for JobConfig {
             job_name:     String::new(),
             job_number:   String::new(),
             customer:     String::new(),
-            plate_tech:   String::new(),
-            press_system: String::new(),
-            esxr_number:  String::new(),
+            plate_tech:   Vec::new(),
+            plate_type:   Vec::new(),
+            press:        String::new(),
             print_type:   String::new(),
             date:         String::new(),
             set_number:   String::new(),
@@ -196,17 +197,16 @@ impl Default for JobConfig {
 }
 
 impl JobConfig {
-    /// Auto-assembled heading: "Customer — CRS XPS ESXR — RP"
+    /// Auto-assembled heading: "Customer — CRS XPS ONYX 6 — RP"
     /// Only includes non-empty components.
     pub fn heading(&self) -> String {
-        let spec_parts: Vec<&str> = [
-            self.plate_tech.as_str(),
-            self.press_system.as_str(),
-            self.esxr_number.as_str(),
+        let spec_parts: Vec<String> = [
+            (!self.plate_tech.is_empty()).then(|| self.plate_tech.join(" ")),
+            (!self.plate_type.is_empty()).then(|| self.plate_type.join(" ")),
+            (!self.press.is_empty()).then(|| self.press.clone()),
         ]
-        .iter()
-        .copied()
-        .filter(|s| !s.is_empty())
+        .into_iter()
+        .flatten()
         .collect();
 
         let parts: Vec<String> = [
@@ -245,22 +245,31 @@ mod tests {
     #[test]
     fn heading_all_fields() {
         let mut job = JobConfig::default();
-        job.customer     = "Acme".into();
-        job.plate_tech   = "CRS".into();
-        job.press_system = "XPS".into();
-        job.print_type   = "RP".into();
+        job.customer   = "Acme".into();
+        job.plate_tech = vec!["CRS".into()];
+        job.plate_type = vec!["XPS".into()];
+        job.print_type = "RP".into();
         assert_eq!(job.heading(), "Acme — CRS XPS — RP");
     }
 
     #[test]
-    fn heading_with_esxr() {
+    fn heading_with_press() {
         let mut job = JobConfig::default();
-        job.customer     = "TestCo".into();
-        job.plate_tech   = "QUA".into();
-        job.press_system = "XPS".into();
-        job.esxr_number  = "3245".into();
-        job.print_type   = "SP".into();
-        assert_eq!(job.heading(), "TestCo — QUA XPS 3245 — SP");
+        job.customer   = "TestCo".into();
+        job.plate_tech = vec!["QUA".into()];
+        job.plate_type = vec!["XPS".into()];
+        job.press      = "ONYX 6".into();
+        job.print_type = "SP".into();
+        assert_eq!(job.heading(), "TestCo — QUA XPS ONYX 6 — SP");
+    }
+
+    #[test]
+    fn heading_multi_select() {
+        let mut job = JobConfig::default();
+        job.customer   = "Acme".into();
+        job.plate_tech = vec!["CRS".into(), "QUA".into()];
+        job.plate_type = vec!["XPS".into(), "ITP".into(), "ESXR".into()];
+        assert_eq!(job.heading(), "Acme — CRS QUA XPS ITP ESXR");
     }
 
     #[test]

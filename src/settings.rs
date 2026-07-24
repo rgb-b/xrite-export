@@ -18,8 +18,8 @@ pub struct FieldVisibility {
     #[serde(default = "yes")] pub job_number:   bool,
     #[serde(default = "yes")] pub customer:     bool,
     #[serde(default = "yes")] pub plate_tech:   bool,
-    #[serde(default = "yes")] pub press_system: bool,
-    #[serde(default)]         pub esxr_number:  bool,
+    #[serde(default = "yes")] pub plate_type:   bool,
+    #[serde(default)]         pub press:        bool,
     #[serde(default = "yes")] pub print_type:   bool,
     #[serde(default = "yes")] pub date:         bool,
     #[serde(default = "yes")] pub set_number:   bool,
@@ -34,7 +34,7 @@ impl Default for FieldVisibility {
     fn default() -> Self {
         Self {
             job_name: true, job_number: true, customer: true,
-            plate_tech: true, press_system: true, esxr_number: false,
+            plate_tech: true, plate_type: true, press: false,
             print_type: true, date: true, set_number: true,
             inks: true, lpis: true, steps: true,
         }
@@ -148,7 +148,7 @@ fn default_job_presets() -> Vec<JobPreset> {
             name: "Gradation Strip".into(),
             fields: FieldVisibility {
                 job_name: false, job_number: true, customer: true,
-                plate_tech: true, press_system: true, esxr_number: false,
+                plate_tech: true, plate_type: true, press: false,
                 print_type: true, date: true, set_number: true,
                 inks: false, lpis: true, steps: true,
             },
@@ -160,7 +160,7 @@ fn default_job_presets() -> Vec<JobPreset> {
             name: "Sample Scan".into(),
             fields: FieldVisibility {
                 job_name: true, job_number: true, customer: true,
-                plate_tech: true, press_system: true, esxr_number: true,
+                plate_tech: true, plate_type: true, press: true,
                 print_type: true, date: true, set_number: false,
                 inks: true, lpis: false, steps: true,
             },

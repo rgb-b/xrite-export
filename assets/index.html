@@ -889,24 +889,27 @@ body {
       <input id="f-job-number" type="text" oninput="job.job_number=this.value">
     </div>
 
-    <div id="fr-plate-press" class="field-row">
-      <label>Plate / Press</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-        <div class="toggle-group" id="plate-tech-group">
-          <button class="tgl" data-val="CRS"  onclick="setPlateTech('CRS')">CRS</button>
-          <button class="tgl" data-val="QUA"  onclick="setPlateTech('QUA')">QUA</button>
-          <button class="tgl" data-val="ESXR" onclick="setPlateTech('ESXR')">ESXR</button>
-          <button class="tgl" data-val=""     onclick="setPlateTech('')">—</button>
-        </div>
-        <input id="f-plate-num" type="text" placeholder="#" title="Plate/spec number"
-               style="width:52px;border:1px solid var(--border);border-radius:3px;padding:3px 5px;font-size:12px;font-family:var(--mono);"
-               oninput="job.esxr_number=this.value;updateHeading();pushJob()">
-        <div class="toggle-group" id="press-sys-group">
-          <button class="tgl" data-val="XPS" onclick="setPressSystem('XPS')">XPS</button>
-          <button class="tgl" data-val="ITP" onclick="setPressSystem('ITP')">ITP</button>
-          <button class="tgl" data-val=""    onclick="setPressSystem('')">—</button>
-        </div>
+    <div id="fr-plate-tech" class="field-row">
+      <label>Plate Tech</label>
+      <div class="toggle-group" id="plate-tech-group">
+        <button class="tgl" data-val="CRS" onclick="toggleMulti('plate_tech','plate-tech-group','CRS')">CRS</button>
+        <button class="tgl" data-val="QUA" onclick="toggleMulti('plate_tech','plate-tech-group','QUA')">QUA</button>
       </div>
+    </div>
+
+    <div id="fr-plate-type" class="field-row">
+      <label>Plate</label>
+      <div class="toggle-group" id="plate-type-group">
+        <button class="tgl" data-val="XPS"  onclick="toggleMulti('plate_type','plate-type-group','XPS')">XPS</button>
+        <button class="tgl" data-val="ITP"  onclick="toggleMulti('plate_type','plate-type-group','ITP')">ITP</button>
+        <button class="tgl" data-val="ESXR" onclick="toggleMulti('plate_type','plate-type-group','ESXR')">ESXR</button>
+      </div>
+    </div>
+
+    <div id="fr-press" class="field-row">
+      <label>Press</label>
+      <input id="f-press" type="text" placeholder="e.g. ONYX 6"
+             oninput="job.press=this.value;updateHeading();pushJob()">
     </div>
 
     <div id="fr-print-type" class="field-row">
@@ -1119,7 +1122,7 @@ function makeDefaultJob() {
   return {
     preset_name: '',
     job_name: '', job_number: '', customer: '',
-    plate_tech: '', press_system: '', esxr_number: '',
+    plate_tech: [], plate_type: [], press: '',
     print_type: '', date: '', set_number: '',
     inks: [
       {kind:'cyan',    name:'C'},
@@ -1276,11 +1279,11 @@ function populateMetadata() {
   setV('f-customer',   job.customer);
   setV('f-job-name',   job.job_name);
   setV('f-job-number', job.job_number);
-  setV('f-plate-num',  job.esxr_number);
+  setV('f-press',      job.press);
   setV('f-date',       job.date);
   setV('f-set-number', job.set_number);
-  syncToggle('plate-tech-group',  job.plate_tech);
-  syncToggle('press-sys-group',   job.press_system);
+  syncMultiToggle('plate-tech-group', job.plate_tech);
+  syncMultiToggle('plate-type-group', job.plate_type);
   syncToggle('print-type-group',  job.print_type);
   updateHeading();
 }
@@ -1308,12 +1311,27 @@ function syncToggle(groupId, val) {
   }
 }
 
-function setPlateTech(val) {
-  job.plate_tech = val; syncToggle('plate-tech-group', val); updateHeading(); pushJob();
+// Multi-select toggle group: clicking a button adds/removes its value from
+// job[field] (an array) instead of picking exactly one.
+function toggleMulti(field, groupId, val) {
+  if (!Array.isArray(job[field])) job[field] = [];
+  const idx = job[field].indexOf(val);
+  if (idx >= 0) job[field].splice(idx, 1);
+  else job[field].push(val);
+  syncMultiToggle(groupId, job[field]);
+  updateHeading();
+  pushJob();
 }
-function setPressSystem(val) {
-  job.press_system = val; syncToggle('press-sys-group', val); updateHeading(); pushJob();
+
+function syncMultiToggle(groupId, vals) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const list = vals || [];
+  for (const btn of group.querySelectorAll('.tgl')) {
+    btn.classList.toggle('active', list.includes(btn.dataset.val));
+  }
 }
+
 function setPrintType(val) {
   job.print_type = val; syncToggle('print-type-group', val); updateHeading(); pushJob();
 }
@@ -1322,7 +1340,11 @@ function setReportOrientation(val) {
 }
 
 function updateHeading() {
-  const specParts = [job.plate_tech, job.press_system, job.esxr_number].filter(Boolean);
+  const specParts = [
+    (job.plate_tech || []).join(' '),
+    (job.plate_type || []).join(' '),
+    job.press,
+  ].filter(Boolean);
   const parts = [job.customer, specParts.join(' '), job.print_type].filter(Boolean);
   const el = document.getElementById('heading-preview');
   if (el) el.textContent = parts.join(' — ') || '—';
@@ -1465,8 +1487,8 @@ const JOB_PRESET_FIELDS = [
   { key: 'job_number',   label: 'Job #' },
   { key: 'customer',     label: 'Customer' },
   { key: 'plate_tech',   label: 'Plate Tech' },
-  { key: 'press_system', label: 'Press System' },
-  { key: 'esxr_number',  label: 'Plate #' },
+  { key: 'plate_type',   label: 'Plate' },
+  { key: 'press',        label: 'Press' },
   { key: 'print_type',   label: 'Print Type' },
   { key: 'date',         label: 'Date' },
   { key: 'set_number',   label: 'Set #' },
@@ -1588,33 +1610,24 @@ function loadJobPreset(i) {
   const fields = p.fields || {};
   // Show/hide left-panel field rows based on visibility
   const visMap = {
-    job_name:     'fr-job-name',
-    job_number:   'fr-job-number',
-    customer:     'fr-customer',
-    plate_tech:   'fr-plate-press',
-    press_system: 'fr-plate-press',  // same row
-    esxr_number:  'fr-plate-press',  // same row
-    print_type:   'fr-print-type',
-    date:         'fr-date',
-    set_number:   'fr-set-number',
-    inks:         'fr-inks',
-    lpis:         'fr-lpis',
-    steps:        'fr-steps',
+    job_name:   'fr-job-name',
+    job_number: 'fr-job-number',
+    customer:   'fr-customer',
+    plate_tech: 'fr-plate-tech',
+    plate_type: 'fr-plate-type',
+    press:      'fr-press',
+    print_type: 'fr-print-type',
+    date:       'fr-date',
+    set_number: 'fr-set-number',
+    inks:       'fr-inks',
+    lpis:       'fr-lpis',
+    steps:      'fr-steps',
   };
-  // Plate/press row: show if any of plate_tech, press_system, esxr_number are visible
-  const showPlateRow = fields.plate_tech !== false || fields.press_system !== false || fields.esxr_number !== false;
-  const visited = new Set();
   for (const { key } of JOB_PRESET_FIELDS) {
     const rowId = visMap[key];
-    if (!rowId || visited.has(rowId)) continue;
-    visited.add(rowId);
-    const el = document.getElementById(rowId);
+    const el = rowId && document.getElementById(rowId);
     if (!el) continue;
-    if (rowId === 'fr-plate-press') {
-      el.style.display = showPlateRow ? '' : 'none';
-    } else {
-      el.style.display = fields[key] !== false ? '' : 'none';
-    }
+    el.style.display = fields[key] !== false ? '' : 'none';
   }
   closeSettings();
   showToast(`Preset "${p.name}" loaded`);
@@ -2264,15 +2277,15 @@ let compareJobs = [];       // array of loaded JobConfig objects
 let activeCompareIdx = 0;   // which compareJob drives the diff panel
 
 const CMP_META_FIELDS = [
-  { key: 'customer',     label: 'Customer' },
-  { key: 'job_name',     label: 'Job Name' },
-  { key: 'job_number',   label: 'Job #' },
-  { key: 'plate_tech',   label: 'Plate' },
-  { key: 'esxr_number',  label: 'Plate #' },
-  { key: 'press_system', label: 'Press' },
-  { key: 'print_type',   label: 'Print Type' },
-  { key: 'date',         label: 'Date' },
-  { key: 'set_number',   label: 'Set #' },
+  { key: 'customer',   label: 'Customer' },
+  { key: 'job_name',   label: 'Job Name' },
+  { key: 'job_number', label: 'Job #' },
+  { key: 'plate_tech', label: 'Plate Tech' },
+  { key: 'plate_type', label: 'Plate' },
+  { key: 'press',      label: 'Press' },
+  { key: 'print_type', label: 'Print Type' },
+  { key: 'date',       label: 'Date' },
+  { key: 'set_number', label: 'Set #' },
 ];
 
 function loadCompareFile(event) {
@@ -2383,8 +2396,11 @@ function renderCompare() {
   body.appendChild(metaSection);
 
   for (const { key, label } of CMP_META_FIELDS) {
-    const aVal = (job[key] || '').toString();
-    const bVal = (compareJob[key] || '').toString();
+    const isArr = Array.isArray(job[key]) || Array.isArray(compareJob[key]);
+    const aRaw = job[key];
+    const bRaw = compareJob[key];
+    const aVal = isArr ? (aRaw || []).join(', ') : (aRaw || '').toString();
+    const bVal = isArr ? (bRaw || []).join(', ') : (bRaw || '').toString();
     const row = document.createElement('div');
     row.className = 'cmp-row';
     const lbl = document.createElement('div');
@@ -2410,7 +2426,7 @@ function renderCompare() {
       bEl.className = 'cmp-val-b';
       bEl.title = 'Click to adopt B value';
       bEl.innerHTML = `<span class="cmp-val-tag">B</span><span>${esc(bVal || '—')}</span>`;
-      bEl.onclick = () => adoptCompareValue(key, bVal, label, aEl, bEl);
+      bEl.onclick = () => adoptCompareValue(key, isArr ? (bRaw || []) : bVal, label, aEl, bEl, isArr);
 
       vals.append(aEl, bEl);
     }
@@ -2540,21 +2556,21 @@ function renderDeltaCell(td, delta, tolerance) {
   }
 }
 
-function adoptCompareValue(key, val, label, aEl, bEl) {
-  job[key] = val;
+function adoptCompareValue(key, val, label, aEl, bEl, isArr) {
+  job[key] = isArr ? [...val] : val;
+  const displayVal = isArr ? val.join(', ') : val;
   // Update UI field if it exists
   const fieldMap = {
     customer: 'f-customer', job_name: 'f-job-name', job_number: 'f-job-number',
-    esxr_number: 'f-plate-num', date: 'f-date', set_number: 'f-set-number',
-    plate_tech: null, press_system: null, print_type: null,
+    press: 'f-press', date: 'f-date', set_number: 'f-set-number',
   };
   const fieldId = fieldMap[key];
   if (fieldId) {
     setV(fieldId, val);
   } else if (key === 'plate_tech') {
-    syncToggle('plate-tech-group', val);
-  } else if (key === 'press_system') {
-    syncToggle('press-sys-group', val);
+    syncMultiToggle('plate-tech-group', val);
+  } else if (key === 'plate_type') {
+    syncMultiToggle('plate-type-group', val);
   } else if (key === 'print_type') {
     syncToggle('print-type-group', val);
   }
@@ -2563,7 +2579,7 @@ function adoptCompareValue(key, val, label, aEl, bEl) {
   // Visually mark as adopted: swap colours
   aEl.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:11.5px;border-radius:3px;padding:1px 4px;background:#dcfce7;color:#166534;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
   aEl.querySelector('.cmp-val-tag').textContent = '✓';
-  aEl.querySelector('span:last-child').textContent = val || '—';
+  aEl.querySelector('span:last-child').textContent = displayVal || '—';
   bEl.style.opacity = '.4';
   showToast(`${label} → "${val}"`);
 }

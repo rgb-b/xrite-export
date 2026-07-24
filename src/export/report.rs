@@ -69,18 +69,6 @@ pub fn generate_report(job: &JobConfig, orientation: ReportOrientation) -> Strin
 
 // ── Header ────────────────────────────────────────────────────────────────────
 
-/// Combine the plate-technology, press-system, and screening-spec fields
-/// into a single "Plate/Press" value, e.g. "CRS ONYX 6". Empty fields are
-/// dropped rather than leaving stray whitespace.
-fn plate_press_value(job: &JobConfig) -> String {
-    [job.plate_tech.as_str(), job.press_system.as_str(), job.esxr_number.as_str()]
-        .iter()
-        .filter(|s| !s.is_empty())
-        .copied()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 /// Render one "Label: Value" metadata pill, or an empty string if the value
 /// is empty — every header field is a uniform tag, and blank fields are
 /// skipped entirely rather than showing an empty pill.
@@ -106,12 +94,14 @@ fn build_header(job: &JobConfig) -> String {
     };
 
     let tags: String = [
-        meta_tag("Job Number",  &job.job_number),
-        meta_tag("Customer",    &job.customer),
-        meta_tag("Plate/Press", &plate_press_value(job)),
-        meta_tag("Print Type",  &job.print_type),
-        meta_tag("Date",        &job.date),
-        meta_tag("Set",         &job.set_number),
+        meta_tag("Job Number", &job.job_number),
+        meta_tag("Customer",   &job.customer),
+        meta_tag("Plate Tech", &job.plate_tech.join(", ")),
+        meta_tag("Plate",      &job.plate_type.join(", ")),
+        meta_tag("Press",      &job.press),
+        meta_tag("Print Type", &job.print_type),
+        meta_tag("Date",       &job.date),
+        meta_tag("Set",        &job.set_number),
     ]
     .join("");
 
@@ -720,13 +710,9 @@ pub fn generate_comparison_report(jobs: &[&JobConfig], orientation: ReportOrient
     // ── Shared field detection ────────────────────────────────────────────────
     let s_customer   = all_same(jobs, |j| &j.customer);
     let s_job_name   = all_same(jobs, |j| &j.job_name);
-    let s_plate_tech = all_same(jobs, |j| &j.plate_tech);
-    let s_esxr       = all_same(jobs, |j| &j.esxr_number);
-    let s_press      = all_same(jobs, |j| &j.press_system);
-    // The Plate/Press tag combines three raw fields — only treat it as
-    // "shared" (and safe to show once in the banner) when all three of its
-    // ingredients are identical across every job.
-    let s_plate_press = s_plate_tech && s_press && s_esxr;
+    let s_plate_tech = all_same_vec(jobs, |j| &j.plate_tech);
+    let s_plate_type = all_same_vec(jobs, |j| &j.plate_type);
+    let s_press      = all_same(jobs, |j| &j.press);
     let s_print_type = all_same(jobs, |j| &j.print_type);
     let s_date       = all_same(jobs, |j| &j.date);
     let s_set        = all_same(jobs, |j| &j.set_number);
@@ -745,13 +731,16 @@ pub fn generate_comparison_report(jobs: &[&JobConfig], orientation: ReportOrient
         format!(r#"<div class="job-title">{}</div>"#, esc(&first.customer))
     } else { String::new() };
 
-    let shared_plate_press = if s_plate_press { plate_press_value(first) } else { String::new() };
+    let shared_plate_tech = if s_plate_tech { first.plate_tech.join(", ") } else { String::new() };
+    let shared_plate_type = if s_plate_type { first.plate_type.join(", ") } else { String::new() };
     let mut shared_tags: String = [
-        meta_tag("Customer",    if s_customer   { first.customer.as_str() } else { "" }),
-        meta_tag("Plate/Press", shared_plate_press.as_str()),
-        meta_tag("Print Type",  if s_print_type { first.print_type.as_str() } else { "" }),
-        meta_tag("Date",        if s_date       { first.date.as_str() } else { "" }),
-        meta_tag("Set",         if s_set        { first.set_number.as_str() } else { "" }),
+        meta_tag("Customer",   if s_customer { first.customer.as_str() } else { "" }),
+        meta_tag("Plate Tech", shared_plate_tech.as_str()),
+        meta_tag("Plate",      shared_plate_type.as_str()),
+        meta_tag("Press",      if s_press { first.press.as_str() } else { "" }),
+        meta_tag("Print Type", if s_print_type { first.print_type.as_str() } else { "" }),
+        meta_tag("Date",       if s_date { first.date.as_str() } else { "" }),
+        meta_tag("Set",        if s_set { first.set_number.as_str() } else { "" }),
     ]
     .join("");
     if s_inks {
@@ -782,12 +771,14 @@ pub fn generate_comparison_report(jobs: &[&JobConfig], orientation: ReportOrient
         // Job Number is always shown per-job — it's the one field that's
         // meaningless to share even if it happens to coincide.
         let mut tags: String = meta_tag("Job Number", &job.job_number);
-        if !s_job_name    { tags.push_str(&meta_tag("Job Name",    &job.job_name)); }
-        if !s_customer    { tags.push_str(&meta_tag("Customer",    &job.customer)); }
-        if !s_plate_press { tags.push_str(&meta_tag("Plate/Press", &plate_press_value(job))); }
-        if !s_print_type  { tags.push_str(&meta_tag("Print Type",  &job.print_type)); }
-        if !s_date        { tags.push_str(&meta_tag("Date",        &job.date)); }
-        if !s_set         { tags.push_str(&meta_tag("Set",         &job.set_number)); }
+        if !s_job_name   { tags.push_str(&meta_tag("Job Name",    &job.job_name)); }
+        if !s_customer   { tags.push_str(&meta_tag("Customer",    &job.customer)); }
+        if !s_plate_tech { tags.push_str(&meta_tag("Plate Tech",  &job.plate_tech.join(", "))); }
+        if !s_plate_type { tags.push_str(&meta_tag("Plate",       &job.plate_type.join(", "))); }
+        if !s_press      { tags.push_str(&meta_tag("Press",       &job.press)); }
+        if !s_print_type { tags.push_str(&meta_tag("Print Type",  &job.print_type)); }
+        if !s_date       { tags.push_str(&meta_tag("Date",        &job.date)); }
+        if !s_set        { tags.push_str(&meta_tag("Set",         &job.set_number)); }
         if !s_inks {
             let names = job.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ");
             tags.push_str(&meta_tag("Inks", &names));
@@ -855,6 +846,19 @@ where
     F: Fn(&'a JobConfig) -> &'a String,
 {
     let mut iter = jobs.iter().map(|j| f(j).as_str());
+    let first = match iter.next() {
+        Some(v) if !v.is_empty() => v,
+        _ => return false,
+    };
+    iter.all(|v| v == first)
+}
+
+/// Like `all_same`, but for multi-select (`Vec<String>`) fields.
+fn all_same_vec<'a, F>(jobs: &[&'a JobConfig], f: F) -> bool
+where
+    F: Fn(&'a JobConfig) -> &'a Vec<String>,
+{
+    let mut iter = jobs.iter().map(|j| f(j));
     let first = match iter.next() {
         Some(v) if !v.is_empty() => v,
         _ => return false,
