@@ -7,3 +7,9 @@ data-export/
 # Legacy / archived material
 archive/
 .archive-session/
+
+# Contains real customer job data — local reference only
+docs/sample_report.html
+docs/mockup_landscape.html
+docs/mockup_portrait.html
+docs/Labelmakers Flexipack Report.html

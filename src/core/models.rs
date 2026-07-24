@@ -72,6 +72,16 @@ impl WeightData {
         }
     }
 
+    /// Resize density and step vectors to match a new ink count.
+    /// New columns are zero-filled; excess columns are dropped.
+    #[allow(dead_code)] // used in tests
+    pub fn resize_inks(&mut self, num_inks: usize) {
+        self.density.resize(num_inks, 0.0);
+        for row in &mut self.steps {
+            row.resize(num_inks, 0.0);
+        }
+    }
+
     /// Resize step rows to match a new step count.
     /// New rows are zero-filled; excess rows are dropped.
     pub fn resize_steps(&mut self, num_steps: usize, num_inks: usize) {

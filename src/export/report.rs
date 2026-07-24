@@ -1,15 +1,41 @@
-//! HTML report generator — print-ready A4 portrait.
+//! HTML report generator — print-ready A4, landscape or portrait.
 //!
-//! Columns are auto-sized to content (narrow + tall, not wide + squat).
+//! Every shape's data table stretches to fill its container (`width: 100%`)
+//! so two shape tables never end up visibly different widths just because
+//! one has fewer LPI weight groups than the other.
 //! Spot ink headers match Pantone catalogue colours when the name contains
 //! a recognisable PMS number.
+
+use serde::{Deserialize, Serialize};
 
 use crate::core::models::{InkKind, JobConfig, ShapeData};
 use crate::core::targets::interpolate_target;
 
+// ── Orientation ───────────────────────────────────────────────────────────────
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ReportOrientation {
+    /// Shapes render side-by-side, columns of equal width.
+    #[default]
+    Landscape,
+    /// Shapes stack one below another (original layout).
+    Portrait,
+}
+
+impl ReportOrientation {
+    fn page_size(self) -> &'static str {
+        match self { Self::Landscape => "landscape", Self::Portrait => "portrait" }
+    }
+
+    fn body_class(self) -> &'static str {
+        match self { Self::Landscape => " class=\"landscape\"", Self::Portrait => "" }
+    }
+}
+
 // ── Public entry point ────────────────────────────────────────────────────────
 
-pub fn generate_report(job: &JobConfig) -> String {
+pub fn generate_report(job: &JobConfig, orientation: ReportOrientation) -> String {
     let title = {
         let h = job.heading();
         if h.is_empty() { "Ink Density Report".to_string() } else { h }
@@ -21,9 +47,9 @@ pub fn generate_report(job: &JobConfig) -> String {
 <head>
 <meta charset="UTF-8">
 <title>{title}</title>
-<style>{css}</style>
+<style>@page {{ size: A4 {page_size}; margin: 0; }}{css}</style>
 </head>
-<body>
+<body{body_class}>
 <div class="no-print">
   <button onclick="window.print()">Print / Save PDF</button>
   <button onclick="window.close()">Close</button>
@@ -32,59 +58,65 @@ pub fn generate_report(job: &JobConfig) -> String {
 {body}
 </body>
 </html>"#,
-        title  = esc(&title),
-        css    = CSS,
-        header = build_header(job),
-        body   = build_body(job),
+        title      = esc(&title),
+        page_size  = orientation.page_size(),
+        body_class = orientation.body_class(),
+        css        = CSS,
+        header     = build_header(job),
+        body       = build_body(job),
     )
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
 
+/// Combine the plate-technology, press-system, and screening-spec fields
+/// into a single "Plate/Press" value, e.g. "CRS ONYX 6". Empty fields are
+/// dropped rather than leaving stray whitespace.
+fn plate_press_value(job: &JobConfig) -> String {
+    [job.plate_tech.as_str(), job.press_system.as_str(), job.esxr_number.as_str()]
+        .iter()
+        .filter(|s| !s.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Render one "Label: Value" metadata pill, or an empty string if the value
+/// is empty — every header field is a uniform tag, and blank fields are
+/// skipped entirely rather than showing an empty pill.
+fn meta_tag(label: &str, value: &str) -> String {
+    if value.is_empty() {
+        String::new()
+    } else {
+        format!(
+            r#"<span class="meta-tag"><b>{label}:</b> {value}</span>"#,
+            label = esc(label),
+            value = esc(value),
+        )
+    }
+}
+
 fn build_header(job: &JobConfig) -> String {
-    let customer = if !job.customer.is_empty() {
-        format!(r#"<div class="customer">{}</div>"#, esc(&job.customer))
-    } else { String::new() };
-
-    let job_name = if !job.job_name.is_empty() {
-        format!(r#"<div class="job-name">{}</div>"#, esc(&job.job_name))
-    } else { String::new() };
-
-    let spec_tags: String = [
-        job.plate_tech.as_str(),
-        job.press_system.as_str(),
-        job.esxr_number.as_str(),
-        job.print_type.as_str(),
-    ]
-    .iter()
-    .filter(|s| !s.is_empty())
-    .map(|s| format!(r#"<span class="spec-tag">{}</span>"#, esc(s)))
-    .collect::<Vec<_>>()
-    .join(" ");
-
-    let specs = if !spec_tags.is_empty() {
-        format!(r#"<div class="spec-line">{spec_tags}</div>"#)
-    } else { String::new() };
-
-    let right_items: String = [
-        ("JOB",  job.job_number.as_str()),
-        ("DATE", job.date.as_str()),
-        ("SET",  job.set_number.as_str()),
-    ]
-    .iter()
-    .filter(|(_, v)| !v.is_empty())
-    .map(|(lbl, val)| format!(
-        r#"<div class="detail-item"><span class="detail-label">{lbl}</span><span class="detail-value">{val}</span></div>"#,
-        val = esc(val),
-    ))
-    .collect();
-
-    let right = if right_items.is_empty() { String::new() } else {
-        format!(r#"<div class="header-right">{right_items}</div>"#)
+    let heading = if !job.job_name.is_empty() {
+        esc(&job.job_name)
+    } else if !job.customer.is_empty() {
+        esc(&job.customer)
+    } else {
+        "Ink Density Report".to_string()
     };
 
+    let tags: String = [
+        meta_tag("Job Number",  &job.job_number),
+        meta_tag("Customer",    &job.customer),
+        meta_tag("Plate/Press", &plate_press_value(job)),
+        meta_tag("Print Type",  &job.print_type),
+        meta_tag("Date",        &job.date),
+        meta_tag("Set",         &job.set_number),
+    ]
+    .join("");
+
     format!(
-        r#"<header class="report-header"><div class="accent-bar"></div><div class="header-inner"><div class="header-left">{customer}{job_name}{specs}</div>{right}</div></header>"#
+        r#"<header class="report-header"><div class="accent-bar"></div><div class="header-inner"><div class="job-title">{heading}</div><div class="tag-row">{tags}</div></div></header>"#
     )
 }
 
@@ -94,10 +126,11 @@ fn build_body(job: &JobConfig) -> String {
     if job.shapes.is_empty() {
         return r#"<p class="empty-note">No data recorded.</p>"#.to_string();
     }
-    job.shapes.iter()
+    let sections = job.shapes.iter()
         .map(|shape| build_shape_section(job, shape))
         .collect::<Vec<_>>()
-        .join("\n")
+        .join("\n");
+    format!(r#"<div class="shapes-grid">{sections}</div>"#)
 }
 
 fn build_shape_section(job: &JobConfig, shape: &ShapeData) -> String {
@@ -135,7 +168,7 @@ fn build_shape_table(job: &JobConfig, shape: &ShapeData) -> String {
         let last  = wi == num_lpis - 1;
         let extra = if last { "" } else { " lpi-last" };
         h.push_str(&format!(
-            r#"<th colspan="{cols}" class="th-lpi-group{extra}">{lpi}</th>"#,
+            r#"<th colspan="{cols}" class="th-lpi-group{extra}"><span class="lpi-unit">LPI</span><span class="lpi-value">{lpi}</span></th>"#,
             cols  = cols_per_lpi,
             extra = extra,
             lpi   = esc(&weight.lpi),
@@ -482,14 +515,12 @@ const CSS: &str = r#"
 
 body {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 10pt;
+  font-size: 11.5pt;
   color: #1a1a1a;
   background: #fff;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-
-@page { size: A4 portrait; margin: 0; }
 
 /* ── Screen-only UI ── */
 .no-print {
@@ -506,96 +537,102 @@ body {
 @media print { .no-print { display: none !important; } }
 
 /* ── Header ── */
-.report-header { margin-bottom: 8mm; }
+.report-header { margin-bottom: 6mm; }
 .accent-bar { height: 6px; background: #1e293b; }
 .header-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 7mm 17mm 7mm;
+  padding: 6mm 12mm 5mm;
   border-bottom: 1pt solid #1e293b;
 }
-.header-left { flex: 1; }
-.header-right { flex-shrink: 0; padding-left: 12mm; text-align: right; }
-
-.customer {
-  font-size: 20pt; font-weight: 700; color: #1e293b;
-  letter-spacing: -0.4px; line-height: 1.1; margin-bottom: 4pt;
-}
-.job-name { font-size: 11pt; color: #374151; font-weight: 500; margin-bottom: 5pt; }
-.spec-line { display: flex; flex-wrap: wrap; gap: 3pt; }
-.spec-tag {
-  display: inline-block;
-  background: #f1f5f9; border: 0.5pt solid #cbd5e1; border-radius: 3px;
-  padding: 2pt 6pt; font-size: 8pt; font-weight: 600; color: #475569;
-  letter-spacing: 0.3px;
+.job-title {
+  font-size: 15pt; font-weight: 700; color: #1e293b;
+  letter-spacing: -0.2px; line-height: 1.2; margin-bottom: 7pt;
 }
 
-.detail-item { margin-bottom: 5pt; line-height: 1.2; }
-.detail-label {
-  display: block; font-size: 6.5pt; text-transform: uppercase;
-  letter-spacing: 0.6px; color: #9ca3af; margin-bottom: 1pt;
+/* Every metadata field is a uniform "Label: Value" tag; fields with an
+   empty value are omitted entirely rather than showing a blank pill. */
+.tag-row { display: flex; flex-wrap: wrap; gap: 6pt; }
+.meta-tag {
+  display: inline-flex; align-items: baseline; gap: 4pt;
+  background: #f1f5f9; border: 0.5pt solid #cbd5e1; border-radius: 4px;
+  padding: 4pt 10pt; font-size: 10pt; font-weight: 600; color: #1e293b;
+  white-space: nowrap;
 }
-.detail-value { font-size: 9pt; font-weight: 600; color: #1e293b; }
+.meta-tag b {
+  font-size: 7.5pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #64748b;
+}
 
-/* ── Shape section ── */
+/* ── Shapes ── */
+/* Stacked by default (portrait); landscape puts them side-by-side in
+   equal-width columns — see `body.landscape` below. */
+.shapes-grid { display: block; }
 .shape-section {
-  padding: 0 17mm;
+  padding: 0 12mm;
   margin-bottom: 8mm;
   page-break-inside: avoid;
 }
+body.landscape .shapes-grid {
+  display: flex; flex-wrap: wrap; gap: 8mm; align-items: flex-start;
+}
+body.landscape .shape-section { flex: 1 1 0; min-width: 0; }
+
 .shape-heading {
-  display: flex; align-items: center; gap: 6pt; margin-bottom: 5pt;
+  display: flex; align-items: center; gap: 8pt; margin-bottom: 6pt;
 }
 .shape-heading::after {
-  content: ''; flex: 1; height: 0.5pt; background: #cbd5e1;
+  content: ''; flex: 1; height: 1pt; background: #cbd5e1;
 }
 .shape-label {
-  font-size: 8.5pt; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.8px; color: #1e293b;
-  background: #f1f5f9; border: 0.5pt solid #cbd5e1; border-radius: 3px;
-  padding: 2.5pt 8pt; white-space: nowrap;
+  font-size: 13pt; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.6px; color: #fff;
+  background: #1e293b; border: none; border-radius: 4px;
+  padding: 5pt 14pt; white-space: nowrap;
 }
-.empty-note { font-size: 8.5pt; color: #9ca3af; font-style: italic; padding: 4pt 17mm; }
+.empty-note { font-size: 9.5pt; color: #9ca3af; font-style: italic; padding: 4pt 12mm; }
 
-/* ── Data table ── */
+/* ── Data table — always fills its container, regardless of how many
+   LPI weight groups it has, so two tables never end up different widths ── */
 .data-table {
   border-collapse: collapse;
-  font-size: 8.5pt;
+  table-layout: fixed;
+  width: 100%;
+  font-size: 9.5pt;
   font-variant-numeric: tabular-nums;
-  /* auto table-layout: columns size to content */
 }
 
 /* Header cells */
 th {
-  padding: 3.5pt 5pt;
+  padding: 4pt 4pt;
   text-align: center;
-  font-size: 7.5pt;
+  font-size: 8.5pt;
   font-weight: 700;
   letter-spacing: 0.2px;
   background: #1e293b;
   color: #94a3b8;
   border: 0.5pt solid #334155;
-  white-space: nowrap;
+  overflow: hidden;
 }
 th.th-corner {
-  text-align: left; padding-left: 5pt;
-  background: #0f172a; color: #64748b;
-  font-size: 7pt; text-transform: uppercase; letter-spacing: 0.5px;
+  text-align: left; padding-left: 6pt;
+  background: #0f172a; color: #94a3b8;
+  font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px;
 }
 th.th-target {
-  background: #0f172a; color: #64748b;
-  font-size: 7pt; text-transform: uppercase; letter-spacing: 0.5px;
+  background: #0f172a; color: #94a3b8;
+  font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px;
   border-left: 1pt solid #475569;
 }
+/* LPI group header — an explicit "LPI" tag above the ruling number, so
+   the value doesn't read as an unlabeled bare number. */
 th.th-lpi-group {
   background: #263347; color: #cbd5e1;
-  font-size: 8pt; font-weight: 700; letter-spacing: 0.5px;
-  border-bottom: 1.5pt solid #475569; padding: 4pt 5pt;
+  border-bottom: 1.5pt solid #475569; padding: 4pt 4pt;
 }
+.lpi-unit  { display: block; font-size: 6.5pt; font-weight: 600; letter-spacing: 1px; color: #8fa2bd; text-transform: uppercase; }
+.lpi-value { display: block; font-size: 11.5pt; font-weight: 800; color: #f1f5f9; margin-top: 1pt; }
 
 /* Ink name headers — coloured on dark background */
-th.th-ink            { background: #1a2535; font-size: 8pt; font-weight: 700; }
+th.th-ink            { background: #1a2535; font-size: 9.5pt; font-weight: 800; }
 th.ink-c             { color: #38bdf8; }
 th.ink-m             { color: #f472b6; }
 th.ink-y             { color: #fbbf24; }
@@ -603,8 +640,8 @@ th.ink-k             { color: #e2e8f0; }
 th.ink-w             { color: #f1f5f9; }
 th.ink-spot          { color: #c4b5fd; }  /* fallback if no Pantone match */
 
-th.th-avg  { background: #1a2535; color: #86efac; font-size: 7pt; }
-th.th-dev  { background: #1a2535; color: #a5b4fc; font-size: 7pt; }
+th.th-avg  { background: #1a2535; color: #86efac; font-size: 8.5pt; }
+th.th-dev  { background: #1a2535; color: #a5b4fc; font-size: 8.5pt; }
 
 /* LPI group separator */
 th.lpi-last, td.lpi-last {
@@ -613,15 +650,15 @@ th.lpi-last, td.lpi-last {
 
 /* Body cells */
 td {
-  padding: 2.5pt 5pt;
+  padding: 3pt 4pt;
   text-align: right;
   border: 0.5pt solid #e5e7eb;
-  white-space: nowrap;
+  overflow: hidden;
 }
 td.td-step {
-  text-align: left; padding-left: 5pt;
+  text-align: left; padding-left: 6pt;
   background: #f8fafc !important;
-  color: #374151; font-size: 8pt; font-weight: 500;
+  color: #374151; font-size: 9.5pt; font-weight: 600;
   border-right: 1pt solid #cbd5e1;
 }
 td.td-target {
@@ -629,7 +666,7 @@ td.td-target {
   color: #4b5563; font-style: italic;
   border-left: 1pt solid #c7d2fe;
 }
-td.td-avg  { color: #15803d; }
+td.td-avg  { color: #15803d; font-weight: 600; }
 td.td-dev  { color: #374151; }
 td.td-data { color: #111827; }
 
@@ -646,40 +683,23 @@ tr:nth-child(even):not(.row-density) td.td-avg  { background: #f0fdf4; }
 body.combined .report-header  { margin-bottom: 2mm; }
 body.combined .accent-bar     { height: 4px; }
 body.combined .shape-section  { padding: 0 12mm; margin-bottom: 3mm; }
-body.combined .shape-label    { font-size: 7.5pt; padding: 2pt 6pt; }
+body.combined .shape-label    { font-size: 10pt; padding: 3pt 9pt; }
 body.combined .job-section    { margin-bottom: 0; }
 body.combined .job-section + .job-section { margin-top: 3mm; }
 
 /* Shared banner */
-body.combined .shared-banner .header-inner {
-  padding: 4mm 12mm 3mm; flex-direction: column; gap: 3pt; align-items: flex-start;
-}
-body.combined .shared-banner .customer   { font-size: 14pt; margin-bottom: 1pt; }
-body.combined .shared-banner .spec-line  { flex-wrap: wrap; gap: 3pt; }
-body.combined .shared-banner .spec-tag   { font-size: 7pt; padding: 1pt 5pt; }
-body.combined .banner-info-row {
-  font-size: 7.5pt; color: #64748b;
-  display: flex; flex-wrap: wrap; gap: 8pt; margin-top: 2pt;
-}
-body.combined .banner-info-row span b { color: #374151; font-weight: 600; }
+body.combined .shared-banner .header-inner { padding: 4mm 12mm 3mm; }
+body.combined .shared-banner .job-title    { font-size: 13pt; margin-bottom: 4pt; }
+body.combined .shared-banner .meta-tag     { font-size: 8.5pt; padding: 2pt 7pt; }
 
-/* Per-job compact bar — single line, no column layout */
+/* Per-job bar — single compact tag row, no big heading */
 body.combined .job-section .accent-bar  { display: none; }
 body.combined .job-section .report-header { margin-bottom: 1mm; }
 body.combined .job-bar {
-  display: flex; align-items: baseline; justify-content: space-between;
   padding: 2mm 12mm; border-bottom: 0.5pt solid #e2e8f0;
 }
-body.combined .job-bar-left {
-  font-size: 9pt; font-weight: 700; color: #1e293b;
-  display: flex; align-items: baseline; gap: 6pt;
-}
-body.combined .job-bar-num  { font-size: 8pt; color: #64748b; font-weight: 500; }
-body.combined .job-bar-right {
-  font-size: 7.5pt; color: #64748b;
-  display: flex; gap: 8pt;
-}
-body.combined .job-bar-right span b { color: #374151; font-weight: 600; }
+body.combined .job-bar .tag-row  { gap: 5pt; }
+body.combined .job-bar .meta-tag { font-size: 8pt; padding: 2pt 7pt; }
 "#;
 
 // ── Combined multi-job report ─────────────────────────────────────────────────
@@ -690,7 +710,7 @@ body.combined .job-bar-right span b { color: #374151; font-weight: 600; }
 /// once in a shared banner at the top; unique fields appear in each job's
 /// own header.  Jobs are separated by a CSS page-break so the browser's
 /// print-to-PDF produces one tidy document.
-pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
+pub fn generate_comparison_report(jobs: &[&JobConfig], orientation: ReportOrientation) -> String {
     if jobs.is_empty() {
         return "<html><body><p>No jobs provided.</p></body></html>".to_string();
     }
@@ -703,6 +723,10 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
     let s_plate_tech = all_same(jobs, |j| &j.plate_tech);
     let s_esxr       = all_same(jobs, |j| &j.esxr_number);
     let s_press      = all_same(jobs, |j| &j.press_system);
+    // The Plate/Press tag combines three raw fields — only treat it as
+    // "shared" (and safe to show once in the banner) when all three of its
+    // ingredients are identical across every job.
+    let s_plate_press = s_plate_tech && s_press && s_esxr;
     let s_print_type = all_same(jobs, |j| &j.print_type);
     let s_date       = all_same(jobs, |j| &j.date);
     let s_set        = all_same(jobs, |j| &j.set_number);
@@ -715,59 +739,39 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
     let s_shapes = { let k = shapes_key(first); !k.is_empty() && jobs.iter().all(|j| shapes_key(j) == k) };
 
     // ── Shared banner ─────────────────────────────────────────────────────────
-    let customer_h = if s_customer && !first.customer.is_empty() {
-        format!(r#"<div class="customer">{}</div>"#, esc(&first.customer))
+    let heading = if s_job_name && !first.job_name.is_empty() {
+        format!(r#"<div class="job-title">{}</div>"#, esc(&first.job_name))
+    } else if s_customer && !first.customer.is_empty() {
+        format!(r#"<div class="job-title">{}</div>"#, esc(&first.customer))
     } else { String::new() };
 
-    let job_name_h = if s_job_name && !first.job_name.is_empty() {
-        format!(r#"<div class="job-name">{}</div>"#, esc(&first.job_name))
-    } else { String::new() };
-
-    // Spec tags: plate/press/print type + shapes if shared
-    let mut spec_parts: Vec<String> = Vec::new();
-    for s in [
-        if s_plate_tech { first.plate_tech.as_str() } else { "" },
-        if s_esxr       { first.esxr_number.as_str() } else { "" },
-        if s_press      { first.press_system.as_str() } else { "" },
-        if s_print_type { first.print_type.as_str() } else { "" },
-    ] {
-        if !s.is_empty() { spec_parts.push(format!(r#"<span class="spec-tag">{}</span>"#, esc(s))); }
+    let shared_plate_press = if s_plate_press { plate_press_value(first) } else { String::new() };
+    let mut shared_tags: String = [
+        meta_tag("Customer",    if s_customer   { first.customer.as_str() } else { "" }),
+        meta_tag("Plate/Press", shared_plate_press.as_str()),
+        meta_tag("Print Type",  if s_print_type { first.print_type.as_str() } else { "" }),
+        meta_tag("Date",        if s_date       { first.date.as_str() } else { "" }),
+        meta_tag("Set",         if s_set        { first.set_number.as_str() } else { "" }),
+    ]
+    .join("");
+    if s_inks {
+        let names = first.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ");
+        shared_tags.push_str(&meta_tag("Inks", &names));
     }
     if s_shapes {
         for shape in &first.shapes {
-            spec_parts.push(format!(r#"<span class="spec-tag">{}</span>"#, esc(&shape.display_name())));
+            shared_tags.push_str(&format!(r#"<span class="meta-tag">{}</span>"#, esc(&shape.display_name())));
         }
     }
-    let shared_specs = if spec_parts.is_empty() { String::new() } else {
-        format!(r#"<div class="spec-line">{}</div>"#, spec_parts.join(" "))
-    };
 
-    // Info row at bottom of banner: date / set / inks if shared
-    let mut info_parts: Vec<String> = Vec::new();
-    if s_date && !first.date.is_empty() {
-        info_parts.push(format!("<span><b>Date</b> {}</span>", esc(&first.date)));
-    }
-    if s_set && !first.set_number.is_empty() {
-        info_parts.push(format!("<span><b>Set</b> {}</span>", esc(&first.set_number)));
-    }
-    if s_inks {
-        let names = first.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ");
-        info_parts.push(format!("<span><b>Inks</b> {}</span>", esc(&names)));
-    }
-    let info_row = if info_parts.is_empty() { String::new() } else {
-        format!(r#"<div class="banner-info-row">{}</div>"#, info_parts.join(""))
-    };
-
-    let shared_banner = if customer_h.is_empty() && job_name_h.is_empty()
-        && shared_specs.is_empty() && info_row.is_empty()
-    {
+    let shared_banner = if heading.is_empty() && shared_tags.is_empty() {
         String::new()
     } else {
         format!(
             r#"<header class="report-header shared-banner">
 <div class="accent-bar"></div>
 <div class="header-inner">
-  {customer_h}{job_name_h}{shared_specs}{info_row}
+  {heading}<div class="tag-row">{shared_tags}</div>
 </div>
 </header>"#
         )
@@ -775,60 +779,21 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
 
     // ── Per-job sections ──────────────────────────────────────────────────────
     let job_sections: String = jobs.iter().map(|job| {
-        // Left: job name (if unique) + job number inline
-        let name_part = if !s_job_name && !job.job_name.is_empty() {
-            format!(r#"<span>{}</span>"#, esc(&job.job_name))
-        } else { String::new() };
-
-        let num_part = if !job.job_number.is_empty() {
-            format!(r#"<span class="job-bar-num">#{}</span>"#, esc(&job.job_number))
-        } else { String::new() };
-
-        // Unique spec tags (plate/press/print if they differ)
-        let unique_specs: String = [
-            if !s_plate_tech { job.plate_tech.as_str() } else { "" },
-            if !s_esxr       { job.esxr_number.as_str() } else { "" },
-            if !s_press      { job.press_system.as_str() } else { "" },
-            if !s_print_type { job.print_type.as_str() } else { "" },
-        ]
-        .iter()
-        .filter(|s| !s.is_empty())
-        .map(|s| format!(r#"<span class="job-bar-num">{}</span>"#, esc(s)))
-        .collect::<Vec<_>>()
-        .join(" ");
-
-        // Right: unique date / set / inks / customer
-        let mut right_parts: Vec<String> = Vec::new();
-        if !s_customer && !job.customer.is_empty() {
-            right_parts.push(format!("<span><b>{}</b></span>", esc(&job.customer)));
-        }
-        if !s_date && !job.date.is_empty() {
-            right_parts.push(format!("<span><b>Date</b> {}</span>", esc(&job.date)));
-        }
-        if !s_set && !job.set_number.is_empty() {
-            right_parts.push(format!("<span><b>Set</b> {}</span>", esc(&job.set_number)));
-        }
+        // Job Number is always shown per-job — it's the one field that's
+        // meaningless to share even if it happens to coincide.
+        let mut tags: String = meta_tag("Job Number", &job.job_number);
+        if !s_job_name    { tags.push_str(&meta_tag("Job Name",    &job.job_name)); }
+        if !s_customer    { tags.push_str(&meta_tag("Customer",    &job.customer)); }
+        if !s_plate_press { tags.push_str(&meta_tag("Plate/Press", &plate_press_value(job))); }
+        if !s_print_type  { tags.push_str(&meta_tag("Print Type",  &job.print_type)); }
+        if !s_date        { tags.push_str(&meta_tag("Date",        &job.date)); }
+        if !s_set         { tags.push_str(&meta_tag("Set",         &job.set_number)); }
         if !s_inks {
             let names = job.inks.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ");
-            right_parts.push(format!("<span><b>Inks</b> {}</span>", esc(&names)));
+            tags.push_str(&meta_tag("Inks", &names));
         }
-        let right_h = if right_parts.is_empty() { String::new() } else {
-            format!(r#"<div class="job-bar-right">{}</div>"#, right_parts.join(""))
-        };
 
-        // Only render the job bar if there's something to show
-        let bar = if name_part.is_empty() && num_part.is_empty()
-            && unique_specs.is_empty() && right_h.is_empty()
-        {
-            String::new()
-        } else {
-            format!(
-                r#"<div class="job-bar">
-  <div class="job-bar-left">{name_part}{num_part}{unique_specs}</div>
-  {right_h}
-</div>"#
-            )
-        };
+        let bar = format!(r#"<div class="job-bar"><div class="tag-row">{tags}</div></div>"#);
 
         // If shapes are shared, suppress the per-job shape headings
         let body = if s_shapes {
@@ -848,9 +813,9 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
 <head>
 <meta charset="UTF-8">
 <title>{title}</title>
-<style>{css}</style>
+<style>@page {{ size: A4 {page_size}; margin: 0; }}{css}</style>
 </head>
-<body class="combined">
+<body class="combined{landscape_class}">
 <div class="no-print">
   <button onclick="window.print()">Print / Save PDF</button>
   <button onclick="window.close()">Close</button>
@@ -859,10 +824,12 @@ pub fn generate_comparison_report(jobs: &[&JobConfig]) -> String {
 {job_sections}
 </body>
 </html>"#,
-        title         = esc(&title),
-        css           = CSS,
-        shared_banner = shared_banner,
-        job_sections  = job_sections,
+        title          = esc(&title),
+        page_size      = orientation.page_size(),
+        landscape_class = if orientation == ReportOrientation::Landscape { " landscape" } else { "" },
+        css            = CSS,
+        shared_banner  = shared_banner,
+        job_sections   = job_sections,
     )
 }
 

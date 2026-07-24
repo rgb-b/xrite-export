@@ -589,17 +589,6 @@ body {
   outline-offset: -1px;
 }
 .settings-row .hint { font-size: 11px; color: var(--text-muted); }
-.locate-btn {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  font-size: 11px;
-  border-radius: 3px;
-  cursor: pointer;
-  white-space: nowrap;
-  border: 1px solid var(--border);
-  background: var(--btn-bg);
-}
-.locate-btn:disabled { opacity: .4; cursor: not-allowed; }
 #modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -870,10 +859,8 @@ body {
 
   <div class="toolbar-sep"></div>
 
-  <button class="tbtn primary" onclick="exportExcel()">&#x1F4CA; Excel</button>
-  <button class="tbtn" onclick="printReport()">&#x1F5A8; Report</button>
+  <button class="tbtn primary" onclick="printReport()">&#x1F5A8; Report</button>
   <button class="tbtn" onclick="exportSVG()">&#x25F1; SVG</button>
-  <button class="tbtn" id="pdf-btn" onclick="exportPDF()" disabled title="Start companion to enable PDF export">&#x1F4C4; PDF</button>
 
   <button class="tbtn" id="compare-btn" onclick="document.getElementById('compare-file').click()" title="Load sessions to compare">&#x21C4; Compare</button>
   <input id="compare-file" type="file" accept=".json" multiple hidden onchange="loadCompareFile(event)">
@@ -1052,29 +1039,17 @@ body {
         <button onclick="addLpiValueSetting()" class="s-add-btn">+ Add</button>
       </div>
 
-      <div class="settings-section-title">Companion — Illustrator / PDF</div>
+      <div class="settings-section-title">Report Layout</div>
       <div class="settings-row">
-        <label>Illustrator.exe Path</label>
-        <input id="s-illustrator-path" type="text" placeholder="C:\Program Files\Adobe\...">
-        <span class="hint">Set on Windows companion PC.</span>
-      </div>
-      <div class="settings-row">
-        <label>AI Template (Standard 14-step)</label>
-        <div style="display:flex;gap:4px;align-items:center;">
-          <input id="s-ai-template" type="text" placeholder="C:\templates\template.ai" style="flex:1">
-          <button id="locate-ai-template" class="locate-btn" onclick="locateFile('s-ai-template','ai')">Locate&#8230;</button>
+        <label>Orientation</label>
+        <div class="toggle-group" id="report-orientation-group">
+          <button class="tgl" data-val="landscape" onclick="setReportOrientation('landscape')">Landscape</button>
+          <button class="tgl" data-val="portrait"  onclick="setReportOrientation('portrait')">Portrait</button>
         </div>
-      </div>
-      <div class="settings-row">
-        <label>AI Template (Extended 16-step)</label>
-        <div style="display:flex;gap:4px;align-items:center;">
-          <input id="s-ai-template-ext" type="text" placeholder="C:\templates\template_extended.ai" style="flex:1">
-          <button id="locate-ai-template-ext" class="locate-btn" onclick="locateFile('s-ai-template-ext','ai')">Locate&#8230;</button>
-        </div>
+        <span class="hint">Landscape puts shapes side-by-side; portrait stacks them.</span>
       </div>
     </div>
     <div id="modal-footer">
-      <a href="/api/export/builder-script" download>&#8595; Builder Script</a>
       <button onclick="closeSettings()">Cancel</button>
       <button class="primary" onclick="saveSettings()">Save Settings</button>
     </div>
@@ -1116,10 +1091,9 @@ function interpolateTarget(stepStr) {
 
 // ── State ─────────────────────────────────────────────────────────────────
 let job = null;
-let settings = { job_presets: [], step_presets: [], dot_types: [], lpi_values: [] };
+let settings = { job_presets: [], step_presets: [], dot_types: [], lpi_values: [], report_orientation: 'landscape' };
 let activeShapeIdx = 0;
 let activeLpiIdx = [];
-let companionAvailable = false;
 let addingShape = false;
 let addingLpi = false;
 
@@ -1342,6 +1316,9 @@ function setPressSystem(val) {
 }
 function setPrintType(val) {
   job.print_type = val; syncToggle('print-type-group', val); updateHeading(); pushJob();
+}
+function setReportOrientation(val) {
+  settings.report_orientation = val; syncToggle('report-orientation-group', val);
 }
 
 function updateHeading() {
@@ -2236,19 +2213,6 @@ async function pushJob() {
 }
 
 // ── Exports ───────────────────────────────────────────────────────────────
-async function exportExcel() {
-  showToast('Exporting Excel…');
-  try {
-    const r = await fetch('/api/export/excel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
-    if (!r.ok) { showToast('Excel error: ' + await r.text(), true); return; }
-    const blob = await r.blob();
-    const cd = r.headers.get('Content-Disposition') || '';
-    const m = cd.match(/filename="([^"]+)"/);
-    downloadBlob(blob, m ? m[1] : 'export.xlsx');
-    showToast('Excel exported');
-  } catch (e) { showToast('Excel error: ' + e.message, true); }
-}
-
 async function printReport() {
   showToast('Generating report…');
   try {
@@ -2271,99 +2235,21 @@ async function exportSVG() {
   } catch (e) { showToast('SVG error: ' + e.message, true); }
 }
 
-async function probeCompanion() {
-  try {
-    const r = await fetch('http://localhost:7432/health', {signal: AbortSignal.timeout(700)});
-    companionAvailable = r.ok;
-  } catch { companionAvailable = false; }
-  updatePdfButton();
-}
-
-function updatePdfButton() {
-  const btn = document.getElementById('pdf-btn');
-  btn.disabled = !companionAvailable;
-  btn.title = companionAvailable ? '' : 'Start companion (ink-density-tool.exe --companion) to enable';
-  for (const el of document.querySelectorAll('.locate-btn')) {
-    el.disabled = !companionAvailable;
-    el.title = companionAvailable ? 'Browse on companion PC' : 'Start companion to enable';
-  }
-}
-
-async function locateFile(inputId, filter) {
-  if (!companionAvailable) return;
-  try {
-    const r = await fetch(`http://localhost:7432/browse/file?filter=${filter}`);
-    if (r.status === 204) return;
-    if (!r.ok) throw new Error(await r.text());
-    const data = await r.json();
-    if (data.path) document.getElementById(inputId).value = data.path;
-  } catch (e) { showToast('File browser: ' + e.message, true); }
-}
-
-async function exportPDF() {
-  if (!companionAvailable) return;
-  showToast('Exporting PDF via Illustrator…');
-  try {
-    const r = await fetch('http://localhost:7432/export/pdf', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(job)});
-    if (!r.ok) { showToast('PDF error: ' + await r.text(), true); return; }
-    const blob = await r.blob();
-    const cd = r.headers.get('Content-Disposition') || '';
-    const m = cd.match(/filename="([^"]+)"/);
-    downloadBlob(blob, m ? m[1] : 'export.pdf');
-    showToast('PDF exported');
-  } catch (e) {
-    showToast('PDF error: ' + e.message, true);
-    companionAvailable = false;
-    updatePdfButton();
-  }
-}
-
 // ── Settings modal ────────────────────────────────────────────────────────
 function openSettings() {
-  document.getElementById('s-illustrator-path').value  = settings.illustrator_path || '';
-  document.getElementById('s-ai-template').value       = settings.ai_template || '';
-  document.getElementById('s-ai-template-ext').value   = settings.ai_template_extended || '';
+  syncToggle('report-orientation-group', settings.report_orientation || 'landscape');
   renderJobPresets();
   renderStepPresetsList();
   renderDotTypesList();
   renderLpiValuesList();
-  if (companionAvailable) fetchCompanionSettings();
   document.getElementById('modal-overlay').hidden = false;
 }
 
-async function fetchCompanionSettings() {
-  try {
-    const r = await fetch('http://localhost:7432/settings');
-    const cs = await r.json();
-    document.getElementById('s-illustrator-path').value = cs.illustrator_path || '';
-    document.getElementById('s-ai-template').value      = cs.ai_template || '';
-    document.getElementById('s-ai-template-ext').value  = cs.ai_template_extended || '';
-  } catch {}
-}
-
 async function saveSettings() {
-  settings.illustrator_path     = document.getElementById('s-illustrator-path').value;
-  settings.ai_template          = document.getElementById('s-ai-template').value;
-  settings.ai_template_extended = document.getElementById('s-ai-template-ext').value;
   // dot_types and lpi_values are already mutated in place by add/delete functions
-
   try {
     await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)});
   } catch (e) { showToast('Settings save error: ' + e.message, true); }
-
-  if (companionAvailable) {
-    try {
-      await fetch('http://localhost:7432/settings', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          illustrator_path:    settings.illustrator_path,
-          ai_template:         settings.ai_template,
-          ai_template_extended: settings.ai_template_extended,
-        }),
-      });
-    } catch {}
-  }
 
   closeSettings();
   showToast('Settings saved');
@@ -2697,7 +2583,6 @@ function renderAll() {
 async function init() {
   await Promise.all([fetchJob(), fetchSettings()]);
   renderAll();
-  probeCompanion();
   fetchBuildVersion();
 }
 
@@ -2721,8 +2606,9 @@ async function fetchSettings() {
     if (!settings.lpi_values)   settings.lpi_values   = [];
     if (!settings.step_presets) settings.step_presets = [];
     if (!settings.job_presets)  settings.job_presets  = [];
+    if (!settings.report_orientation) settings.report_orientation = 'landscape';
   } catch {
-    settings = { job_presets:[], step_presets:[], dot_types:[], lpi_values:[] };
+    settings = { job_presets:[], step_presets:[], dot_types:[], lpi_values:[], report_orientation:'landscape' };
   }
 }
 

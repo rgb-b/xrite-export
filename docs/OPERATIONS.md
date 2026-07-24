@@ -1,24 +1,21 @@
 # xrite-export — Operations
 
-## Linux build deps (one-time)
+## Build deps
 
-```bash
-sudo apt-get install \
-  libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev \
-  libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
-```
-
-These are required for egui/eframe. The web build doesn't strictly need GTK, but the same crate tree is used either way.
+None beyond a standard Rust toolchain. The desktop egui/eframe GUI (which needed
+GTK/libxcb) was removed — `src/gui/` had drifted out of sync with the current
+data model and wasn't wired into `main.rs` anyway. The web build (`--features web`)
+is the only functional mode.
 
 ## Dev mode
 
 ```bash
-cargo run                                # desktop egui app
 cargo run --features web -- --web        # web server on :8181
-cargo run --features web -- --companion  # Windows companion on :7432
-cargo test                               # unit tests
-cargo test round_trip                    # single test by name substring
+cargo test                                # unit tests
+cargo test round_trip                     # single test by name substring
 ```
+
+`cargo run` without `--web` prints "Desktop mode is not yet available in this build."
 
 ## Production build + deploy (Linux web)
 
@@ -32,27 +29,6 @@ journalctl -u ink-density-tool -f        # tail logs
 The service unit (`deploy/ink-density-tool.service`) is symlinked from `/etc/systemd/system/ink-density-tool.service`. Editing it in the repo + `sudo systemctl daemon-reload` is enough.
 
 **Important:** the running binary is loaded into memory. Recompiling without a restart will NOT update the live server.
-
-## Cross-compile for Windows (desktop EXE)
-
-```bash
-cargo build --release --target x86_64-pc-windows-gnu
-# → target/x86_64-pc-windows-gnu/release/ink-density-tool.exe
-```
-
-For the companion EXE, add `--features web`:
-
-```bash
-cargo build --release --target x86_64-pc-windows-gnu --features web
-# → same path; runs as `ink-density-tool.exe --companion` on Windows
-```
-
-You'll need `mingw-w64` and the rust target installed:
-
-```bash
-sudo apt-get install mingw-w64
-rustup target add x86_64-pc-windows-gnu
-```
 
 ## Domain migration in progress
 
@@ -88,8 +64,5 @@ To reset settings to defaults: delete `~/InkDensityTool/settings.json` and resta
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Browser can't generate PDFs on macOS/Linux | Companion EXE not running on a Windows machine | Run the companion EXE on Windows; the frontend probes `localhost:7432/health` on load |
-| Excel export panics | Temp file missing `.xlsx` suffix | Use `tempfile::Builder::new().suffix(".xlsx").tempfile()` |
-| Excel formulas show as plaintext | Code called `set_formula()` then re-saved | Don't. Formulas are baked into `assets/template_extended.xlsx`. `fix_second_table_formulas` and `clone_first_pair` are dead code — do not invoke. |
 | Web server returns old data after recompile | systemd unit not restarted | `sudo systemctl restart ink-density-tool` — recompiling alone doesn't update the running process |
-| PNA CORS errors when probing localhost from HTTPS page | Browser blocks Private Network Access by default | Companion sends `Access-Control-Allow-Private-Network: true` — verify that header isn't being stripped by a proxy |
+| Report always comes out landscape/portrait unexpectedly | `report_orientation` setting | Toggle it in the web Settings modal (Report Layout section) — it's read fresh from disk on every export request |

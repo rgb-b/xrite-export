@@ -6,11 +6,9 @@
 //!   POST /api/job                      → replace in-memory job state
 //!   GET  /api/settings                 → settings JSON
 //!   POST /api/settings                 → replace settings
-//!   POST /api/export/excel             → body = JobConfig JSON → stream .xlsx
 //!   POST /api/export/report            → body = JobConfig JSON → print-ready HTML
 //!   POST /api/export/comparison        → body = [JobConfig, …] JSON → print-ready HTML
 //!   POST /api/export/svg               → body = JobConfig JSON → stream .svg
-//!   GET  /api/export/builder-script    → download build_ai_template.jsx
 //!   GET  /api/version                  → { build_ts }
 
 use std::sync::{Arc, Mutex};
@@ -25,13 +23,17 @@ use axum::{
 use tokio::net::TcpListener;
 
 use crate::core::models::JobConfig;
+use crate::export::report::ReportOrientation;
 use crate::settings::{self, Settings};
 
 type SharedJob = Arc<Mutex<JobConfig>>;
 
 const INDEX_HTML: &[u8] = include_bytes!("../../assets/index.html");
-const BUILDER_JSX: &[u8] = include_bytes!("../../assets/build_ai_template.jsx");
 const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");
+
+fn report_orientation() -> ReportOrientation {
+    settings::load().report_orientation
+}
 
 pub fn run() {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -46,11 +48,9 @@ async fn serve() {
         .route("/", get(index))
         .route("/api/job", get(get_job).post(set_job))
         .route("/api/settings", get(get_settings).post(put_settings))
-        .route("/api/export/excel", post(export_excel))
         .route("/api/export/report", post(export_report))
         .route("/api/export/comparison", post(export_comparison))
         .route("/api/export/svg", post(export_svg_handler))
-        .route("/api/export/builder-script", get(download_builder_script))
         .route("/api/version", get(get_version))
         .with_state(state);
 
@@ -102,42 +102,8 @@ async fn put_settings(Json(new_settings): Json<Settings>) -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn export_excel(Json(job): Json<JobConfig>) -> Response {
-    let tmp = match tempfile::Builder::new().suffix(".xlsx").tempfile() {
-        Ok(f) => f,
-        Err(e) => return error_response(e.to_string()),
-    };
-
-    match crate::export::excel::export_excel(&job, tmp.path()) {
-        Ok(()) => {
-            let bytes = match std::fs::read(tmp.path()) {
-                Ok(b) => b,
-                Err(e) => return error_response(e.to_string()),
-            };
-            let filename = if job.job_number.is_empty() {
-                "export.xlsx".to_string()
-            } else {
-                format!("{}.xlsx", job.job_number)
-            };
-            Response::builder()
-                .status(StatusCode::OK)
-                .header(
-                    "Content-Type",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-                .header(
-                    "Content-Disposition",
-                    format!("attachment; filename=\"{filename}\""),
-                )
-                .body(bytes.into())
-                .unwrap()
-        }
-        Err(e) => error_response(e.to_string()),
-    }
-}
-
 async fn export_report(Json(job): Json<JobConfig>) -> Response {
-    let html = crate::export::report::generate_report(&job);
+    let html = crate::export::report::generate_report(&job, report_orientation());
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "text/html; charset=utf-8")
@@ -147,7 +113,7 @@ async fn export_report(Json(job): Json<JobConfig>) -> Response {
 
 async fn export_comparison(Json(jobs): Json<Vec<JobConfig>>) -> Response {
     let refs: Vec<&JobConfig> = jobs.iter().collect();
-    let html = crate::export::report::generate_comparison_report(&refs);
+    let html = crate::export::report::generate_comparison_report(&refs, report_orientation());
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "text/html; charset=utf-8")
@@ -177,18 +143,6 @@ async fn get_version() -> Response {
     json_response(&serde_json::json!({ "build_ts": BUILD_TIMESTAMP }))
 }
 
-async fn download_builder_script() -> Response {
-    Response::builder()
-        .status(StatusCode::OK)
-        .header("Content-Type", "application/javascript")
-        .header(
-            "Content-Disposition",
-            "attachment; filename=\"build_ai_template.jsx\"",
-        )
-        .body(BUILDER_JSX.to_vec().into())
-        .unwrap()
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn json_response<T: serde::Serialize>(data: &T) -> Response {
@@ -197,13 +151,5 @@ fn json_response<T: serde::Serialize>(data: &T) -> Response {
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
         .body(body.into())
-        .unwrap()
-}
-
-fn error_response(msg: String) -> Response {
-    Response::builder()
-        .status(StatusCode::INTERNAL_SERVER_ERROR)
-        .header("Content-Type", "text/plain")
-        .body(msg.into())
         .unwrap()
 }

@@ -18,24 +18,7 @@ serde_json = "1"
 # Platform directories (%APPDATA%, ~/.config, etc.)
 dirs = "6"
 
-# Excel export (read+write existing templates)
-umya-spreadsheet = "2"
-
-# PDF merge
-lopdf = "0.34"
-
-# Asset embedding
-rust-embed = "8"
-
-# GUI (egui + eframe for native window)
-eframe = "0.30"
-egui = "0.30"
-egui_extras = "0.30"
-
-# File dialogs
-rfd = "0.15"
-
-# Temp files for export
+# Temp files (session round-trip tests)
 tempfile = "3"
 
 # Error handling

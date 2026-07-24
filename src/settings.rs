@@ -1,9 +1,8 @@
 //! Application settings — persisted to JSON.
 //!
-//! Includes job presets, step presets, and companion/path configuration.
+//! Includes job presets, step presets, and report layout configuration.
 //! Loaded lazily on first access; cache invalidated on every save.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -127,10 +126,10 @@ pub struct Settings {
     #[serde(default)]
     pub last_session_path: String,
 
-    // Companion (optional — Illustrator PDF bridge on Windows)
-    #[serde(default)] pub illustrator_path:    String,
-    #[serde(default)] pub ai_template:         String,
-    #[serde(default)] pub ai_template_extended: String,
+    /// Layout of the HTML report — landscape (shapes side-by-side) or
+    /// portrait (stacked).
+    #[serde(default)]
+    pub report_orientation: crate::export::report::ReportOrientation,
 }
 
 fn default_dot_types() -> Vec<String> {
@@ -184,9 +183,7 @@ impl Default for Settings {
             dot_types:            default_dot_types(),
             lpi_values:           default_lpi_values(),
             last_session_path:    String::new(),
-            illustrator_path:     String::new(),
-            ai_template:          String::new(),
-            ai_template_extended: String::new(),
+            report_orientation:   crate::export::report::ReportOrientation::default(),
         }
     }
 }
@@ -199,16 +196,6 @@ impl Settings {
 
     pub fn find_job_preset(&self, name: &str) -> Option<&JobPreset> {
         self.job_presets.iter().find(|p| p.name == name)
-    }
-
-    /// Flat key/value map for the web API (companion paths + last session).
-    pub fn to_flat_map(&self) -> HashMap<String, serde_json::Value> {
-        let mut m = HashMap::new();
-        m.insert("last_session_path".into(),    self.last_session_path.clone().into());
-        m.insert("illustrator_path".into(),     self.illustrator_path.clone().into());
-        m.insert("ai_template".into(),          self.ai_template.clone().into());
-        m.insert("ai_template_extended".into(), self.ai_template_extended.clone().into());
-        m
     }
 }
 
@@ -254,27 +241,11 @@ pub fn save(settings: &Settings) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Patch a flat key/value pair (used by web API for companion settings).
-pub fn patch(key: &str, value: serde_json::Value) {
-    let mut s = load();
-    match key {
-        "last_session_path"    => s.last_session_path    = value.as_str().unwrap_or("").into(),
-        "illustrator_path"     => s.illustrator_path     = value.as_str().unwrap_or("").into(),
-        "ai_template"          => s.ai_template          = value.as_str().unwrap_or("").into(),
-        "ai_template_extended" => s.ai_template_extended = value.as_str().unwrap_or("").into(),
-        _ => {}
-    }
-    let _ = save(&s);
-}
-
 /// Read a single flat string setting.
 pub fn get_str(key: &str) -> String {
     let s = load();
     match key {
-        "last_session_path"    => s.last_session_path,
-        "illustrator_path"     => s.illustrator_path,
-        "ai_template"          => s.ai_template,
-        "ai_template_extended" => s.ai_template_extended,
+        "last_session_path" => s.last_session_path,
         _ => String::new(),
     }
 }
