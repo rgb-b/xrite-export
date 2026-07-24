@@ -189,6 +189,17 @@ body {
   border-color: var(--toggle-active);
 }
 
+/* Toggle button + optional trailing number, e.g. "ESXR 3245" */
+.tgl-pair { display: inline-flex; gap: 2px; }
+.tgl-num {
+  width: 40px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 4px;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
 /* Heading preview */
 .heading-preview {
   font-size: 11px;
@@ -900,9 +911,21 @@ body {
     <div id="fr-plate-type" class="field-row">
       <label>Plate</label>
       <div class="toggle-group" id="plate-type-group">
-        <button class="tgl" data-val="XPS"  onclick="toggleMulti('plate_type','plate-type-group','XPS')">XPS</button>
-        <button class="tgl" data-val="ITP"  onclick="toggleMulti('plate_type','plate-type-group','ITP')">ITP</button>
-        <button class="tgl" data-val="ESXR" onclick="toggleMulti('plate_type','plate-type-group','ESXR')">ESXR</button>
+        <span class="tgl-pair">
+          <button class="tgl" data-val="XPS" onclick="toggleMulti('plate_type','plate-type-group','XPS')">XPS</button>
+          <input class="tgl-num" type="text" placeholder="#" data-base="XPS"
+                 oninput="setMultiNumber('plate_type','plate-type-group','XPS',this.value)">
+        </span>
+        <span class="tgl-pair">
+          <button class="tgl" data-val="ITP" onclick="toggleMulti('plate_type','plate-type-group','ITP')">ITP</button>
+          <input class="tgl-num" type="text" placeholder="#" data-base="ITP"
+                 oninput="setMultiNumber('plate_type','plate-type-group','ITP',this.value)">
+        </span>
+        <span class="tgl-pair">
+          <button class="tgl" data-val="ESXR" onclick="toggleMulti('plate_type','plate-type-group','ESXR')">ESXR</button>
+          <input class="tgl-num" type="text" placeholder="#" data-base="ESXR"
+                 oninput="setMultiNumber('plate_type','plate-type-group','ESXR',this.value)">
+        </span>
       </div>
     </div>
 
@@ -1313,11 +1336,32 @@ function syncToggle(groupId, val) {
 
 // Multi-select toggle group: clicking a button adds/removes its value from
 // job[field] (an array) instead of picking exactly one.
+// Entries may carry an optional trailing number, e.g. "ESXR 3245" — match
+// by base value (exact, or "BASE " prefix) rather than exact string.
+function findMultiEntry(field, baseVal) {
+  return (job[field] || []).findIndex(v => v === baseVal || v.startsWith(baseVal + ' '));
+}
+
 function toggleMulti(field, groupId, val) {
   if (!Array.isArray(job[field])) job[field] = [];
-  const idx = job[field].indexOf(val);
+  const idx = findMultiEntry(field, val);
   if (idx >= 0) job[field].splice(idx, 1);
   else job[field].push(val);
+  syncMultiToggle(groupId, job[field]);
+  updateHeading();
+  pushJob();
+}
+
+// Set (or clear) the optional number attached to one multi-select value.
+// Typing a number for a value that isn't toggled on yet activates it.
+function setMultiNumber(field, groupId, baseVal, numStr) {
+  if (!Array.isArray(job[field])) job[field] = [];
+  const num = numStr.trim();
+  const entry = num ? `${baseVal} ${num}` : baseVal;
+  const idx = findMultiEntry(field, baseVal);
+  if (idx >= 0) job[field][idx] = entry;
+  else if (num) job[field].push(entry);
+  else return; // nothing to do — no entry, no number typed
   syncMultiToggle(groupId, job[field]);
   updateHeading();
   pushJob();
@@ -1328,7 +1372,13 @@ function syncMultiToggle(groupId, vals) {
   if (!group) return;
   const list = vals || [];
   for (const btn of group.querySelectorAll('.tgl')) {
-    btn.classList.toggle('active', list.includes(btn.dataset.val));
+    const base = btn.dataset.val;
+    btn.classList.toggle('active', list.some(v => v === base || v.startsWith(base + ' ')));
+  }
+  for (const inp of group.querySelectorAll('.tgl-num')) {
+    const base = inp.dataset.base;
+    const entry = list.find(v => v === base || v.startsWith(base + ' '));
+    inp.value = entry && entry !== base ? entry.slice(base.length + 1) : '';
   }
 }
 

@@ -137,7 +137,8 @@ pub struct JobConfig {
     #[serde(default)]
     pub plate_tech: Vec<String>,
 
-    /// Plate type (multi-select): "XPS" | "ITP" | "ESXR"
+    /// Plate type (multi-select): "XPS" | "ITP" | "ESXR", each optionally
+    /// followed by a spec number the user typed in, e.g. "ESXR 3245".
     #[serde(default)]
     pub plate_type: Vec<String>,
 
